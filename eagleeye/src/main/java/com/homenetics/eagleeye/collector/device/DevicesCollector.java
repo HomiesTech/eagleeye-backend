@@ -23,7 +23,7 @@ public class DevicesCollector {
     private final List<FileDeviceEntity> fileDevices = new ArrayList<>();
     private static final Logger logger = LoggerFactory.getLogger(DevicesCollector.class);
     private static final String DeviceDataPath = "D:\\DATA\\data";
-
+//    private static final String DeviceDataPath = "/var/homenetics/devices/data";
     public synchronized List<FileDeviceEntity> getAllFileDevices() {
         return new ArrayList<>(fileDevices);
     }

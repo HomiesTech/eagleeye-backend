@@ -41,9 +41,11 @@ public class Devices {
             List<FileDeviceEntity> fileDevices = devicesCollector.getAllFileDevices();
             for (FileDeviceEntity fileDevice : fileDevices) {
                 Integer deviceId = devicesCache.getIdByMacAddress(fileDevice.getMacAddress());
-                DeviceEntity device = mergedDevices.getOrDefault(deviceId, new DeviceEntity());
-                device.update(fileDevice);
-                mergedDevices.put(deviceId, device);
+                DeviceEntity device = mergedDevices.getOrDefault(deviceId, null);
+                if (device != null) {
+                    device.update(fileDevice);
+                    mergedDevices.put(deviceId, device);
+                }
             }
 
             long endTime = System.currentTimeMillis(); // Record end time
