@@ -39,6 +39,7 @@ public class Devices {
             }
 
             List<FileDeviceEntity> fileDevices = devicesCollector.getAllFileDevices();
+
             for (FileDeviceEntity fileDevice : fileDevices) {
                 Integer deviceId = devicesCache.getIdByMacAddress(fileDevice.getMacAddress());
                 DeviceEntity device = mergedDevices.getOrDefault(deviceId, null);

@@ -1,5 +1,6 @@
 package com.homenetics.eagleeye.collector.device;
 
+import com.homenetics.eagleeye.entity.DeviceUserEntity;
 import com.homenetics.eagleeye.entity.FileDeviceEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DevicesCollector {
     private final List<FileDeviceEntity> fileDevices = new ArrayList<>();
     private static final Logger logger = LoggerFactory.getLogger(DevicesCollector.class);
-    private static final String DeviceDataPath = "D:\\DATA\\data";
-//    private static final String DeviceDataPath = "/var/homenetics/devices/data";
+//    private static final String DeviceDataPath = "D:\\DATA\\data";
+    private static final String DeviceDataPath = "/var/homenetics/devices/data";
     public synchronized List<FileDeviceEntity> getAllFileDevices() {
         return new ArrayList<>(fileDevices);
     }
@@ -35,6 +36,7 @@ public class DevicesCollector {
 
     @Scheduled(fixedRate = 65000) // Every 65 seconds
     public void collector() {
+        fileDevices.clear(); // before collecting again file devices, clear the old buffer.
         try {
             String deviceDataPath = DeviceDataPath;
             File baseFolder = new File(deviceDataPath);
@@ -105,10 +107,13 @@ public class DevicesCollector {
                 return null;
             }
 
+            logger.info("DeviceInfo: {}", deviceInfo);
+
             // Process the data (create a FileDeviceEntity)
             FileDeviceEntity deviceEntity = new FileDeviceEntity();
             deviceEntity.setMacAddress(deviceInfo.get("mac"));
             deviceEntity.setDeviceName(deviceInfo.get("devname"));
+            deviceEntity.setIpAddress(deviceInfo.get("ip"));
             deviceEntity.setApplianceState(deviceInfo.get("rstate"));
             deviceEntity.setWifiSignalStrength(Integer.valueOf(deviceInfo.get("wss")));
             deviceEntity.setOnline(deviceInfo.get("online").equals("1"));
@@ -122,9 +127,21 @@ public class DevicesCollector {
             }
             deviceEntity.setUsers(deviceInfo.get("users"));
 
+            String[] userRecords = deviceInfo.get("users").split("\\|");
+            for (String userRecord : userRecords) {
+                if (!userRecord.trim().isEmpty()) {
+                    // Split each record by "," to extract user details
+                    String[] userDetails = userRecord.split(",");
+                    if (userDetails.length == 3) { // Ensure all details are present
+                        String userCode = userDetails[0];
+                        String userIpAddress = userDetails[1];
+                        String userFailureCount = userDetails[2];
+                        deviceEntity.setDeviceUser(new DeviceUserEntity(userCode, userIpAddress, userFailureCount));
+                    }
+                }
+            }
             return deviceEntity;
-
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error("Error creating FileDeviceEntity for file: {}", deviceFile.getName(), e);
             return null;
         }

@@ -33,6 +33,7 @@ public class DeviceEntity {
     private String applianceState;
     private List<WiFiStrengthEntity> wifiSignalStrength;
     private String users;
+    private List<DeviceUserEntity> deviceUsers;
 
     public DeviceEntity() {
         this.wifiSignalStrength = new ArrayList<>();
@@ -58,8 +59,7 @@ public class DeviceEntity {
     }
 
     public void setWifiStrength(Integer wifiSignalStrength) {
-        LocalDateTime now = LocalDateTime.now();
-        this.wifiSignalStrength.add(new WiFiStrengthEntity(wifiSignalStrength,now));
+        this.wifiSignalStrength.add(new WiFiStrengthEntity(wifiSignalStrength,this.syncTime));
         if (this.wifiSignalStrength.size() > MAX_SIG_VALUES) {
             this.wifiSignalStrength.remove(0);
         }
@@ -81,6 +81,7 @@ public class DeviceEntity {
         this.syncTime = fileDevice.getSyncTime();
         this.isOnline = fileDevice.isOnline();
         this.users = fileDevice.getUsers();
+        this.deviceUsers = fileDevice.getDeviceUsers();
         this.setWifiStrength(fileDevice.getWifiSignalStrength());
         this.calculateIsActive();
     }
