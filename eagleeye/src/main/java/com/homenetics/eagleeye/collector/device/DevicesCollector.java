@@ -1,9 +1,13 @@
 package com.homenetics.eagleeye.collector.device;
 
+import com.homenetics.eagleeye.collector.database.CustomersCache;
+import com.homenetics.eagleeye.collector.database.DevicesCache;
 import com.homenetics.eagleeye.entity.DeviceUserEntity;
 import com.homenetics.eagleeye.entity.FileDeviceEntity;
+import com.homenetics.eagleeye.models.CustomerModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +27,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DevicesCollector {
     private final List<FileDeviceEntity> fileDevices = new ArrayList<>();
     private static final Logger logger = LoggerFactory.getLogger(DevicesCollector.class);
+
+    @Autowired
+    private CustomersCache customers;
+
 //    private static final String DeviceDataPath = "D:\\DATA\\data";
     private static final String DeviceDataPath = "/var/homenetics/devices/data";
     public synchronized List<FileDeviceEntity> getAllFileDevices() {
@@ -136,7 +144,17 @@ public class DevicesCollector {
                         String userCode = userDetails[0];
                         String userIpAddress = userDetails[1];
                         String userFailureCount = userDetails[2];
-                        deviceEntity.setDeviceUser(new DeviceUserEntity(userCode, userIpAddress, userFailureCount));
+                        DeviceUserEntity deviceUserEntity = new DeviceUserEntity();
+                        deviceUserEntity.setUserCode(userCode);
+                        deviceUserEntity.setUserIpAddress(userIpAddress);
+                        deviceUserEntity.setUserFailureCount(userFailureCount);
+
+                        CustomerModel customer = customers.getCustomerByCode(userCode);
+                        if (customer != null) {
+                            deviceUserEntity.setCustomerId(customer.getId());
+                            deviceUserEntity.setName(customer.getName());
+                        }
+                        deviceEntity.setDeviceUser(deviceUserEntity);
                     }
                 }
             }

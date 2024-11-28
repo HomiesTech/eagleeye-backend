@@ -1,5 +1,6 @@
 package com.homenetics.eagleeye.service;
 
+import com.homenetics.eagleeye.models.CustomerModel;
 import com.homenetics.eagleeye.models.DeviceModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,25 @@ public class DatabaseService {
     private RestTemplate restTemplate;
 
     private static final Logger logger = LoggerFactory.getLogger(DatabaseService.class);
+
+    public List<CustomerModel> getAllCustomers() {
+        String finalApi = databaseServiceUrl + "/users";
+        try {
+            long startTime = System.currentTimeMillis();
+            ResponseEntity<List<CustomerModel>> response = restTemplate.exchange(finalApi, HttpMethod.GET, null, new ParameterizedTypeReference<List<CustomerModel>>() {});
+            long duration = System.currentTimeMillis() - startTime;
+            logger.info("Customers api response time {} ms", duration);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return response.getBody();
+            } else {
+                logger.error("getAllCustomers, Response Not Successful. {}", response.getBody().toString());
+                return Collections.emptyList();
+            }
+        } catch (Exception e) {
+            logger.error("Error occurred while fetching all customers {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
 
     public List<DeviceModel> getAllDevices() {
         String finalApi = databaseServiceUrl + "/devices";
