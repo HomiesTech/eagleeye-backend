@@ -2,6 +2,7 @@ package com.homenetics.eagleeye.collector.device;
 
 import com.homenetics.eagleeye.collector.database.CustomersCache;
 import com.homenetics.eagleeye.collector.database.DevicesCache;
+import com.homenetics.eagleeye.entity.BootTimeDeviceEntity;
 import com.homenetics.eagleeye.entity.DeviceUserEntity;
 import com.homenetics.eagleeye.entity.FileDeviceEntity;
 import com.homenetics.eagleeye.models.CustomerModel;
@@ -23,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class DevicesCollector {
     private final List<FileDeviceEntity> fileDevices = new ArrayList<>();
+    private final List<BootTimeDeviceEntity> bootTimeDevices = new ArrayList<>();
     private static final Logger logger = LoggerFactory.getLogger(DevicesCollector.class);
 
     @Autowired
@@ -34,9 +36,58 @@ public class DevicesCollector {
         return new ArrayList<>(fileDevices);
     }
 
+    public synchronized  List<BootTimeDeviceEntity> getAllDeviceBootTime() {
+        return new ArrayList<>(bootTimeDevices);
+    }
+
     private synchronized void updateFileDevices(List<FileDeviceEntity> newDevices) {
         fileDevices.clear();
         fileDevices.addAll(newDevices);
+    }
+
+    private synchronized  void updateBootTimeDevices(List<BootTimeDeviceEntity> newDevices) {
+        bootTimeDevices.clear();
+        bootTimeDevices.addAll(newDevices);
+    }
+
+    @Scheduled(fixedRate = 65000)
+    public void bootTimeCollector() {
+        bootTimeDevices.clear();
+        try {
+            String deviceDataPath = DeviceDataPath;
+            File baseFolder = new File(deviceDataPath);
+
+            if (!baseFolder.exists() || !baseFolder.isDirectory()) {
+                logger.warn("Base Folder does not exists or is not a directory: {}", deviceDataPath);
+                return;
+            }
+            List<BootTimeDeviceEntity> newDevices = Collections.synchronizedList(new ArrayList<>());
+
+            Arrays.stream(Objects.requireNonNull(baseFolder.listFiles(File::isDirectory)))
+                    .parallel()
+                    .forEach(macFolder -> {
+                        logger.info("Processing folder: {}", macFolder.getAbsolutePath());
+
+                        File deviceBootFile = new File(macFolder, "boot_time.txt");
+
+                        if (deviceBootFile.exists() && deviceBootFile.isFile()) {
+                            BootTimeDeviceEntity bootTimeDeviceEntity = createBootTimeDeviceEntity(deviceBootFile, macFolder);
+                            if (bootTimeDeviceEntity != null) {
+                                newDevices.add(bootTimeDeviceEntity); // Thread-safe addition to the synchronized list
+                                logger.info("Processed device file: {}", deviceBootFile.getName());
+                            }
+                        } else {
+                            logger.warn("No matching file found for the generated filename: {}", deviceBootFile.getName());
+                        }
+                    });
+
+            if (!newDevices.isEmpty()) {
+                updateBootTimeDevices(newDevices);
+                logger.info("Updated devices boot time with {} new entries.", newDevices.size());
+            }
+        } catch (Exception e) {
+            logger.error("Error during device boot time collection: {}", e.getMessage(), e);
+        }
     }
 
     @Scheduled(fixedRate = 65000) // Every 65 seconds
@@ -89,6 +140,7 @@ public class DevicesCollector {
                                 logger.info("Processed device file: {}", deviceFile.getName());
                             }
                         } else {
+
                             logger.warn("No matching file found for the generated filename: {}", generatedFilename);
                         }
                     });
@@ -103,9 +155,31 @@ public class DevicesCollector {
         }
     }
 
+    private BootTimeDeviceEntity createBootTimeDeviceEntity(File deviceBootFile, File macFolder) {
+        try {
+            String bootTime = parseDeviceBootFile(deviceBootFile);
+            if (bootTime == null) {
+                return null;
+            }else {
+                BootTimeDeviceEntity bootTimeDeviceEntity = new BootTimeDeviceEntity();
+                if (!bootTime.isEmpty()) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                    LocalDateTime bTime = LocalDateTime.parse(bootTime, formatter);
+                    bootTimeDeviceEntity.setBootTime(bTime);
+                    bootTimeDeviceEntity.setMacAddress(macFolder.getName());
+                }
+                return bootTimeDeviceEntity;
+            }
+        } catch ( Exception e ) {
+            logger.error("Error creating BootTimeDeviceEntity for file: {}", deviceBootFile.getName(), e);
+            return null;
+        }
+    }
+
     private FileDeviceEntity createFileDeviceEntity(File deviceFile, File macFolder) {
         try {
             Map<String, String> deviceInfo = parseDeviceFile(deviceFile);
+
             if (deviceInfo.isEmpty()) {
                 logger.warn("No valid data found in file: {}", deviceFile.getName());
                 return null;
@@ -129,6 +203,7 @@ public class DevicesCollector {
                 LocalDateTime syncTime = LocalDateTime.parse(syncTimeString, formatter);
                 deviceEntity.setSyncTime(syncTime);
             }
+
             deviceEntity.setUsers(deviceInfo.get("users"));
 
             String[] userRecords = deviceInfo.get("users").split("\\|");
@@ -174,5 +249,16 @@ public class DevicesCollector {
             }
         }
         return deviceInfo;
+    }
+
+    private String parseDeviceBootFile(File deviceBootFile) throws IOException {
+        if (deviceBootFile.exists() && deviceBootFile.isFile()) {
+            try (BufferedReader br = new BufferedReader(new FileReader(deviceBootFile))) {
+                // Read the first (and only) line
+                return br.readLine();
+            }
+        } else {
+            return null;
+        }
     }
 }

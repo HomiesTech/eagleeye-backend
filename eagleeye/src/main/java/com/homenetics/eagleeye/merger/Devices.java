@@ -2,6 +2,7 @@ package com.homenetics.eagleeye.merger;
 
 import com.homenetics.eagleeye.collector.database.DevicesCache;
 import com.homenetics.eagleeye.collector.device.DevicesCollector;
+import com.homenetics.eagleeye.entity.BootTimeDeviceEntity;
 import com.homenetics.eagleeye.entity.DeviceEntity;
 import com.homenetics.eagleeye.entity.FileDeviceEntity;
 import com.homenetics.eagleeye.models.DeviceModel;
@@ -40,12 +41,25 @@ public class Devices {
 
             // Process fileDevices in parallel
             List<FileDeviceEntity> fileDevices = devicesCollector.getAllFileDevices();
+            List<BootTimeDeviceEntity> devicesBootTime = devicesCollector.getAllDeviceBootTime();
+
             fileDevices.parallelStream().forEach(fileDevice -> {
                 Integer deviceId = devicesCache.getIdByMacAddress(fileDevice.getMacAddress());
                 if (deviceId != null) {
                     DeviceEntity device = mergedDevices.getOrDefault(deviceId, null);
                     if (device != null) {
                         device.update(fileDevice);
+                        mergedDevices.put(deviceId, device);
+                    }
+                }
+            });
+
+            devicesBootTime.parallelStream().forEach(deviceBootTime -> {
+                Integer deviceId = devicesCache.getIdByMacAddress(deviceBootTime.getMacAddress());
+                if (deviceId != null) {
+                    DeviceEntity device = mergedDevices.getOrDefault(deviceId, null);
+                    if (device != null) {
+                        device.update(deviceBootTime);
                         mergedDevices.put(deviceId, device);
                     }
                 }

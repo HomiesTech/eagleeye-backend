@@ -28,6 +28,7 @@ public class DeviceEntity {
     private Integer userId;
     private String codeVersion;
     private LocalDateTime syncTime;
+    private LocalDateTime bootTime;
     private Integer activeState = 0; // 0,1,2 | 0: InActive, 1: Active, 2: between MIN_ACTIVE_MINUTE and MAX_ACTIVE_MINUTE
     private boolean isOnline;
     private String applianceState;
@@ -112,8 +113,13 @@ public class DeviceEntity {
         this.isOnline = fileDevice.isOnline();
         this.users = fileDevice.getUsers();
         this.deviceUsers = fileDevice.getDeviceUsers();
+
         this.setWifiStrength(fileDevice.getWifiSignalStrength());
         this.calculateIsActive();
+    }
+
+    public void update(BootTimeDeviceEntity bootTimeDevice) {
+        this.bootTime = bootTimeDevice.getBootTime();
     }
 
     public void setMacAddress(String macAddress) {
