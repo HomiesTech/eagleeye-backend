@@ -32,6 +32,15 @@ public class DeviceEntity {
     private boolean isOnline;
     private String applianceState;
     private List<WiFiStrengthEntity> wifiSignalStrength;
+    /**
+     * 1 - Excellent
+     * 2 - Very good
+     * 3 - Good
+     * 4 - Fair
+     * 5 - Poor
+     * 6 - Very Poor
+     **/
+    private Integer signalStrength;
     private String users;
     private List<DeviceUserEntity> deviceUsers;
 
@@ -39,18 +48,25 @@ public class DeviceEntity {
         this.wifiSignalStrength = new ArrayList<>();
     }
 
-    private void calculateIsActive() {
+    public void calculateIsActive() {
         LocalDateTime now = LocalDateTime.now();
+        logger.info("Calculating active state for device ID: {} at time: {}", this.deviceId, now);
         if (syncTime != null ) {
+            logger.info("SyncTime for device ID {}: {}", this.deviceId, syncTime);
             long minuteDifference = Duration.between(syncTime, now).toMinutes();
+            logger.info("Time difference in minutes for device ID {}: {}", this.deviceId, minuteDifference);
             if (minuteDifference >= 0 && minuteDifference < MIN_ACTIVE_MINUTE) {
                 this.activeState = 1;
+                logger.info("Device ID {} is set to ACTIVE (state: 1)", this.deviceId);
             }else if (minuteDifference >= MIN_ACTIVE_MINUTE && minuteDifference < MAX_ACTIVE_MINUTE) {
                 this.activeState = 2;
+                logger.info("Device ID {} is set to WARN (state: 2)", this.deviceId);
             }else if (minuteDifference >= MAX_ACTIVE_MINUTE) {
                 this.activeState = 0;
+                logger.info("Device ID {} is set to OFFLINE (state: 0)", this.deviceId);
             }else {
                 this.activeState = 0;
+                logger.warn("Unexpected condition for device ID {}: minuteDifference is {}", this.deviceId, minuteDifference);
             }
         }else {
             this.activeState = 0;
@@ -58,7 +74,21 @@ public class DeviceEntity {
         }
     }
 
+    private void caluclateSignalStrength(Integer wss) {
+        Integer signalState = 6;
+        if (wss != null) {
+            if (wss >= -30) { signalState = 1; }
+            else if (wss >= -50) { signalState = 2; }
+            else if (wss >= -60) { signalState = 3; }
+            else if (wss >= -70) { signalState = 4; }
+            else if (wss >= -80) { signalState = 5; }
+            else { signalState = 6;  }
+        }
+        this.setSignalStrength(signalState);
+    }
+
     public void setWifiStrength(Integer wifiSignalStrength) {
+        this.caluclateSignalStrength(wifiSignalStrength);
         this.wifiSignalStrength.add(new WiFiStrengthEntity(wifiSignalStrength,this.syncTime));
         if (this.wifiSignalStrength.size() > MAX_SIG_VALUES) {
             this.wifiSignalStrength.remove(0);

@@ -17,10 +17,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -44,7 +41,7 @@ public class DevicesCollector {
 
     @Scheduled(fixedRate = 65000) // Every 65 seconds
     public void collector() {
-        fileDevices.clear(); // before collecting again file devices, clear the old buffer.
+        fileDevices.clear(); // Clear old buffer before collecting new file devices.
         try {
             String deviceDataPath = DeviceDataPath;
             File baseFolder = new File(deviceDataPath);
@@ -67,35 +64,34 @@ public class DevicesCollector {
             }
 
             String timePattern = String.format("_%02d%02d", currentHour, targetMinute);
-            List<FileDeviceEntity> newDevices = new ArrayList<>();
+            List<FileDeviceEntity> newDevices = Collections.synchronizedList(new ArrayList<>());
 
-            for (File macFolder : Objects.requireNonNull(baseFolder.listFiles(File::isDirectory))) {
-                logger.info("Processing folder: {}", macFolder.getAbsolutePath());
-                // Current Date Folder
-                File currentDateFolder = new File(macFolder, todayDate);
+            // Process each folder in parallel
+            Arrays.stream(Objects.requireNonNull(baseFolder.listFiles(File::isDirectory)))
+                    .parallel()
+                    .forEach(macFolder -> {
+                        logger.info("Processing folder: {}", macFolder.getAbsolutePath());
+                        File currentDateFolder = new File(macFolder, todayDate);
 
+                        if (!currentDateFolder.exists() || !currentDateFolder.isDirectory()) {
+                            logger.warn("No folder found for today's date: {}", todayDate);
+                            logger.warn("Current Folder does not exist or is not a directory: {}", currentDateFolder.getAbsolutePath());
+                            return;
+                        }
 
-                if (!currentDateFolder.exists() || !currentDateFolder.isDirectory()) {
-                    logger.warn("No folder found for today's date: {}", todayDate);
-                    logger.warn("Current Folder does not exist or is not a directory: {}", currentDateFolder.getAbsolutePath());
-                    continue;
-                }
+                        String generatedFilename = todayDateP2 + timePattern + ".txt";
+                        File deviceFile = new File(currentDateFolder, generatedFilename);
 
-                // Process the files inside the date-specific subfolder
-                String generatedFilename = todayDateP2 + timePattern + ".txt";
-                // Check if the generated filename exists in the current date folder
-                File deviceFile = new File(currentDateFolder, generatedFilename);
-                if (deviceFile.exists() && deviceFile.isFile()) {
-                    // Create a FileDeviceEntity from the file
-                    FileDeviceEntity deviceEntity = createFileDeviceEntity(deviceFile, macFolder);
-                    if (deviceEntity != null) {
-                        newDevices.add(deviceEntity);
-                        logger.info("Processed device file: {}", deviceFile.getName());
-                    }
-                } else {
-                    logger.warn("No matching file found for the generated filename: {}", generatedFilename);
-                }
-            }
+                        if (deviceFile.exists() && deviceFile.isFile()) {
+                            FileDeviceEntity deviceEntity = createFileDeviceEntity(deviceFile, macFolder);
+                            if (deviceEntity != null) {
+                                newDevices.add(deviceEntity); // Thread-safe addition to the synchronized list
+                                logger.info("Processed device file: {}", deviceFile.getName());
+                            }
+                        } else {
+                            logger.warn("No matching file found for the generated filename: {}", generatedFilename);
+                        }
+                    });
 
             if (!newDevices.isEmpty()) {
                 updateFileDevices(newDevices);

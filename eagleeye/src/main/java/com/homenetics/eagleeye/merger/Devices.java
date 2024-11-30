@@ -30,30 +30,50 @@ public class Devices {
         long startTime = System.currentTimeMillis(); // Record start time
         try {
             logger.info("Starting combined device cache refresh...");
+            // Process dbDevices in parallel
             List<DeviceModel> dbDevices = devicesCache.getAllDevices();
+            dbDevices.parallelStream().forEach(dbDevice -> {
+                DeviceEntity device = mergedDevices.getOrDefault(dbDevice.getDevId(), new DeviceEntity());
+                device.update(dbDevice);
+                mergedDevices.put(dbDevice.getDevId(), device);
+            });
 
-            for (DeviceModel dbdevice : dbDevices) {
-                DeviceEntity device = mergedDevices.getOrDefault(dbdevice.getDevId(), new DeviceEntity());
-                device.update(dbdevice);
-                mergedDevices.put(dbdevice.getDevId(), device);
-            }
-
+            // Process fileDevices in parallel
             List<FileDeviceEntity> fileDevices = devicesCollector.getAllFileDevices();
-
-            for (FileDeviceEntity fileDevice : fileDevices) {
+            fileDevices.parallelStream().forEach(fileDevice -> {
                 Integer deviceId = devicesCache.getIdByMacAddress(fileDevice.getMacAddress());
-                DeviceEntity device = mergedDevices.getOrDefault(deviceId, null);
-                if (device != null) {
-                    device.update(fileDevice);
-                    mergedDevices.put(deviceId, device);
+                if (deviceId != null) {
+                    DeviceEntity device = mergedDevices.getOrDefault(deviceId, null);
+                    if (device != null) {
+                        device.update(fileDevice);
+                        mergedDevices.put(deviceId, device);
+                    }
                 }
-            }
+            });
 
             long endTime = System.currentTimeMillis(); // Record end time
             long duration = endTime - startTime; // Calculate duration
             logger.info("Combined device cache refresh completed. Total devices: {} in {} ms", mergedDevices.size(), duration);
         } catch (Exception e) {
             logger.error("Error refreshing combined device: {}", e.getMessage(), e);
+        }
+    }
+
+    @Scheduled(fixedRate = 60000)
+    public void refreshActiveState() {
+        logger.info("Starting refreshActiveState of devices. Total devices: {}", mergedDevices.size());
+        try {
+            // Parallelize the processing of devices
+            mergedDevices.values().parallelStream().forEach(device -> {
+                try {
+                    device.calculateIsActive();
+                } catch (Exception e) {
+                    logger.error("Error calculating active state for device {}: {}", device.getDeviceId(), e.getMessage(), e);
+                }
+            });
+            logger.info("Successfully refreshed active state of all devices.");
+        } catch (Exception e) {
+            logger.error("Error refreshing calculateActiveState of devices: {}", e.getMessage(), e);
         }
     }
 
