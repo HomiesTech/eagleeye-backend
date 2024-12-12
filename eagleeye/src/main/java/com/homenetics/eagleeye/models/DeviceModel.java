@@ -9,6 +9,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class DeviceModel {
     private Integer devId;
+    private String ssid;
+    private String password;
     private String macAddress;
     private Integer userId;
     private LocalDateTime createdAt;

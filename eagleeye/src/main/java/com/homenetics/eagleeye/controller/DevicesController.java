@@ -2,7 +2,8 @@ package com.homenetics.eagleeye.controller;
 
 
 import com.homenetics.eagleeye.entity.DeviceEntity;
-import com.homenetics.eagleeye.merger.Devices;
+import com.homenetics.eagleeye.manager.DevicesManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +19,7 @@ import java.util.List;
 public class DevicesController {
 
     @Autowired
-    private Devices devices;
+    private DevicesManager devices;
 
     private static final Logger logger = LoggerFactory.getLogger(DevicesController.class);
 

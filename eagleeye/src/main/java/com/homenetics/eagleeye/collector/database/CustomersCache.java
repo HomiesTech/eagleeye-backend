@@ -1,7 +1,6 @@
 package com.homenetics.eagleeye.collector.database;
 
 import com.homenetics.eagleeye.models.CustomerModel;
-import com.homenetics.eagleeye.models.DeviceModel;
 import com.homenetics.eagleeye.service.DatabaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,9 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class CustomersCache {
-    private static final ConcurrentHashMap<Integer, CustomerModel> customersCacheById =  new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, Integer> customerCodeToId = new ConcurrentHashMap<>();
-
+    private static final ConcurrentHashMap<String, CustomerModel> customersCache = new ConcurrentHashMap<>();
     private static final Logger logger = LoggerFactory.getLogger(CustomersCache.class);
     private static long refreshCycleCount = 0;
 
@@ -31,27 +28,30 @@ public class CustomersCache {
         try {
             List<CustomerModel> customers = databaseService.getAllCustomers();
             if (customers != null) {
-                ConcurrentHashMap<Integer, CustomerModel> newCache = new ConcurrentHashMap<>();
-                ConcurrentHashMap<String, Integer> newCodeToIdCache = new ConcurrentHashMap<>();
+                ConcurrentHashMap<String, CustomerModel> newCache = new ConcurrentHashMap<>();
                 for (CustomerModel customer : customers) {
-                    newCache.put(customer.getId(), customer);
-                    String customerCode = customer.getCode();
-                    if (customerCode == null || customerCode.isEmpty()) {
-                        customer.setCode();
+                    customer.setCode();
+                    // Use one instance for multiple keys
+                    String customerIdKey = buildKey("id", String.valueOf(customer.getId()));
+                    String customerCodeKey = buildKey("code", customer.getCode());
+                    String customerEmailKey = buildKey("email", customer.getEmail());
+
+                    // Add keys pointing to the same customer object
+                    newCache.put(customerIdKey, customer);
+                    if (customer.getCode() != null && !customer.getCode().isEmpty()) {
+                        newCache.put(customerCodeKey, customer);
                     }
-                    newCodeToIdCache.put(customer.getCode(), customer.getId());
+                    if (customer.getEmail() != null && !customer.getEmail().isEmpty()) {
+                        newCache.put(customerEmailKey, customer);
+                    }
                 }
-                synchronized (customersCacheById) {
-                    customersCacheById.clear();
-                    customersCacheById.putAll(newCache);
-                }
-                synchronized (customerCodeToId) {
-                    customerCodeToId.clear();
-                    customerCodeToId.putAll(newCodeToIdCache);
+                synchronized (customersCache) {
+                    customersCache.clear();
+                    customersCache.putAll(newCache);
                 }
                 long duration = System.currentTimeMillis() - startTime;
                 logger.info("Customer cache refreshed successfully. Total Customers: {} loaded in {} ms.", customers.size(), duration);
-            }else {
+            } else {
                 logger.warn("No data returned from the database during cache refresh.");
             }
         } catch (Exception e) {
@@ -60,21 +60,31 @@ public class CustomersCache {
     }
 
     public CustomerModel getCustomerById(int id) {
-        return customersCacheById.get(Integer.valueOf(id));
+        return customersCache.get(buildKey("id", String.valueOf(id)));
     }
 
     public CustomerModel getCustomerByCode(String code) {
-        Integer customerId = customerCodeToId.get(code);
-        if (customerId == null) {
-            logger.warn("No customer found with code {} in {}", code, customerCodeToId.keySet());
+        if (code == null || code.isEmpty()) {
             return null;
         }
-        return this.getCustomerById(customerId);
+        return customersCache.get(buildKey("code", code));
+    }
+
+    public CustomerModel getCustomerByEmail(String email) {
+        if (email == null || email.isEmpty()) {
+            return null;
+        }
+        return customersCache.get(buildKey("email", email));
     }
 
     public List<CustomerModel> getAllCustomers() {
-        return List.copyOf(customersCacheById.values());
+        return customersCache.values()
+                .stream()
+                .distinct()
+                .toList();
     }
 
+    private String buildKey(String type, String value) {
+        return type + ":" + value; // Generate unique keys for each type
+    }
 }
-

@@ -1,7 +1,6 @@
 package com.homenetics.eagleeye.collector.device;
 
 import com.homenetics.eagleeye.collector.database.CustomersCache;
-import com.homenetics.eagleeye.collector.database.DevicesCache;
 import com.homenetics.eagleeye.entity.BootTimeDeviceEntity;
 import com.homenetics.eagleeye.entity.DeviceUserEntity;
 import com.homenetics.eagleeye.entity.FileDeviceEntity;
@@ -29,6 +28,7 @@ public class DevicesCollector {
 
     @Autowired
     private CustomersCache customers;
+
 
 //    private static final String DeviceDataPath = "D:\\DATA\\data";
     private static final String DeviceDataPath = "/var/homenetics/devices/data";
@@ -196,6 +196,65 @@ public class DevicesCollector {
             deviceEntity.setWifiSignalStrength(Integer.valueOf(deviceInfo.get("wss")));
             deviceEntity.setOnline(deviceInfo.get("online").equals("1"));
             deviceEntity.setCodeVersion(deviceInfo.get("version"));
+            deviceEntity.setPowersave(deviceInfo.get("powersave").equals("1"));
+            deviceEntity.setNvs_free(Integer.valueOf(deviceInfo.get("nvs_free")));
+            deviceEntity.setNvs_used(Integer.valueOf(deviceInfo.get("nvs_used")));
+            deviceEntity.setNvs_total(Integer.valueOf(deviceInfo.get("nvs_total")));
+            deviceEntity.setSpiffs_used(Integer.valueOf(deviceInfo.get("spiffs_used")));
+            deviceEntity.setSpiffs_total(Integer.valueOf(deviceInfo.get("spiffs_total")));
+            deviceEntity.setBoot_time_status_code(Integer.valueOf(deviceInfo.get("boot_status_code")));
+            deviceEntity.setMessage_publish_status(deviceInfo.get("message_publish_status").equals("1"));
+
+            CustomerModel tryOkCust;
+            if (deviceInfo.get("change_cred_try") != null) {
+                DeviceUserEntity changeCredTryUser = new DeviceUserEntity();
+                tryOkCust = customers.getCustomerByCode(deviceInfo.get("change_cred_try"));
+                if (tryOkCust != null) {
+                    changeCredTryUser.setCustomerId(tryOkCust.getId());
+                    changeCredTryUser.setName(tryOkCust.getName());
+                    changeCredTryUser.setUserCode(deviceInfo.get("change_cred_try"));
+                }
+                deviceEntity.setCredChangeTry(changeCredTryUser);
+            }
+
+            if (deviceInfo.get("change_cred_ok") != null) {
+                DeviceUserEntity changeCredTryOk = new DeviceUserEntity();
+                tryOkCust = customers.getCustomerByCode(deviceInfo.get("change_cred_ok"));
+                if (tryOkCust != null) {
+                    changeCredTryOk.setCustomerId(tryOkCust.getId());
+                    changeCredTryOk.setName(tryOkCust.getName());
+                    changeCredTryOk.setUserCode(deviceInfo.get("change_cred_ok"));
+                }
+                deviceEntity.setCredChangeOk(changeCredTryOk);
+            }
+
+            if (deviceInfo.get("ota_try") != null) {
+                DeviceUserEntity otaTryUser = new DeviceUserEntity();
+                tryOkCust = customers.getCustomerByCode(deviceInfo.get("ota_try"));
+                if (tryOkCust != null) {
+                    otaTryUser.setCustomerId(tryOkCust.getId());
+                    otaTryUser.setName(tryOkCust.getName());
+                    otaTryUser.setUserCode(deviceInfo.get("ota_try"));
+                }
+                deviceEntity.setOtaTry(otaTryUser);
+            }
+
+            if (deviceInfo.get("ota_ok") != null) {
+                DeviceUserEntity otaTryOk = new DeviceUserEntity();
+                tryOkCust = customers.getCustomerByCode(deviceInfo.get("ota_ok"));
+                if (tryOkCust != null) {
+                    otaTryOk.setCustomerId(tryOkCust.getId());
+                    otaTryOk.setName(tryOkCust.getName());
+                    otaTryOk.setUserCode(deviceInfo.get("ota_ok"));
+                }
+                deviceEntity.setOtaOk(otaTryOk);
+            }
+
+            deviceEntity.setDownloadMqttUrlResponseCode(deviceInfo.get("download_mqtt_url_res_code") != null ? Integer.valueOf(deviceInfo.get("download_mqtt_url_res_code")) : -99);
+            deviceEntity.setMillis(Long.valueOf(deviceInfo.get("millis")));
+            deviceEntity.setUsername(deviceInfo.get("username"));
+
+            logger.warn("[FileDeviceEntity] {}", deviceEntity);
             // Parse sync_time to LocalDateTime
             String syncTimeString = deviceInfo.get("sync_time");
             if (syncTimeString != null) {
@@ -245,6 +304,8 @@ public class DevicesCollector {
                 String[] parts = line.split("=", 2); // Split only on the first '=' character
                 if (parts.length == 2) {
                     deviceInfo.put(parts[0].trim(), parts[1].trim());
+                }else{
+                    deviceInfo.put(parts[0].trim(),"");
                 }
             }
         }

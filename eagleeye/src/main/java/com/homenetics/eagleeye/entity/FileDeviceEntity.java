@@ -18,6 +18,21 @@ public class FileDeviceEntity {
     private String codeVersion;
     private String applianceState;
     private List<DeviceUserEntity> deviceUsers;
+    private boolean powersave;
+    private String username;
+    private DeviceUserEntity otaTry;
+    private DeviceUserEntity otaOk;
+    private DeviceUserEntity credChangeTry;
+    private DeviceUserEntity credChangeOk;
+    private Integer DownloadMqttUrlResponseCode;
+    private Long millis;
+    private Integer nvs_used;
+    private Integer nvs_free;
+    private Integer nvs_total;
+    private Integer spiffs_total;
+    private Integer spiffs_used;
+    private Boolean message_publish_status;
+    private Integer boot_time_status_code;
 
     public FileDeviceEntity() {
         this.deviceUsers = new ArrayList<>();

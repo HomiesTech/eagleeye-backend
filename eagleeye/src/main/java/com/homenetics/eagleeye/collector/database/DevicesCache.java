@@ -66,4 +66,8 @@ public class DevicesCache {
     public List<DeviceModel> getAllDevices() {
         return List.copyOf(devicesCacheById.values());
     }
+
+    public List<Integer> getAllDeviceIds() {
+        return List.copyOf(devicesCacheById.keySet());
+    }
 }

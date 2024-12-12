@@ -13,6 +13,8 @@ import java.util.List;
 @Data
 public class DeviceEntity {
     private static final Integer MAX_SIG_VALUES = 60;
+    private static final Integer MAX_NVS_VALUES = 60;
+    private static final Integer MAX_SPIFFS_VALUES = 60;
     private static final Integer MIN_ACTIVE_MINUTE = 3;
     private static final Integer MAX_ACTIVE_MINUTE = 5;
     private static final Logger logger = LoggerFactory.getLogger(DeviceEntity.class);
@@ -32,7 +34,19 @@ public class DeviceEntity {
     private Integer activeState = 0; // 0,1,2 | 0: InActive, 1: Active, 2: between MIN_ACTIVE_MINUTE and MAX_ACTIVE_MINUTE
     private boolean isOnline;
     private String applianceState;
+    private boolean powersave;
+    private String username;
+    private DeviceUserEntity otaTry;
+    private DeviceUserEntity otaOk;
+    private DeviceUserEntity credChangeTry;
+    private DeviceUserEntity credChangeOk;
     private List<WiFiStrengthEntity> wifiSignalStrength;
+    private List<NVSStorageEntity> nvsStorage;
+    private List<SpiffsStorageEntity> spiffsStorage;
+    private Integer DownloadMqttUrlResponseCode;
+    private Long millis;
+    private Boolean message_publish_status;
+    private Integer boot_status_code;
     /**
      * 1 - Excellent
      * 2 - Very good
@@ -47,6 +61,8 @@ public class DeviceEntity {
 
     public DeviceEntity() {
         this.wifiSignalStrength = new ArrayList<>();
+        this.nvsStorage = new ArrayList<>();
+        this.spiffsStorage = new ArrayList<>();
     }
 
     public void calculateIsActive() {
@@ -96,12 +112,30 @@ public class DeviceEntity {
         }
     }
 
+    public void setNvsStorage(Integer nvs_used, Integer nvs_free, Integer nvs_total) {
+        NVSStorageEntity nvsStorage = new NVSStorageEntity(nvs_used, nvs_free, nvs_total, this.syncTime);
+        this.nvsStorage.add(nvsStorage);
+        if (this.nvsStorage.size() > MAX_NVS_VALUES) {
+            this.nvsStorage.remove(0);
+        }
+    }
+
+    public void setSpiffsStorage(Integer spiffs_used, Integer spiffs_total) {
+        logger.info("Setting Spiffs Storage: {} {}", spiffs_used, spiffs_total);
+        SpiffsStorageEntity spiffsStorage = new SpiffsStorageEntity(spiffs_used, spiffs_total, this.syncTime);
+        this.spiffsStorage.add(spiffsStorage);
+        if (this.spiffsStorage.size() > MAX_SPIFFS_VALUES) {
+            this.spiffsStorage.remove(0);
+        }
+    }
+
     public void update(DeviceModel deviceModel) {
         this.deviceId = deviceModel.getDevId();
         this.macAddress = deviceModel.getMacAddress();
         this.createdAt = deviceModel.getCreatedAt();
         this.updatedAt = deviceModel.getUpdatedAt();
         this.userId = deviceModel.getUserId();
+        this.password = "********";
     }
 
     public void update(FileDeviceEntity fileDevice) {
@@ -113,7 +147,20 @@ public class DeviceEntity {
         this.isOnline = fileDevice.isOnline();
         this.users = fileDevice.getUsers();
         this.deviceUsers = fileDevice.getDeviceUsers();
+        this.username = fileDevice.getUsername();
+        this.credChangeOk = fileDevice.getCredChangeOk();
+        this.credChangeTry = fileDevice.getCredChangeTry();
+        this.otaOk = fileDevice.getOtaOk();
+        this.otaTry = fileDevice.getOtaTry();
+        this.millis = fileDevice.getMillis();
+        this.DownloadMqttUrlResponseCode = fileDevice.getDownloadMqttUrlResponseCode();
+        this.powersave = fileDevice.isPowersave();
+        this.boot_status_code = fileDevice.getBoot_time_status_code();
+        this.message_publish_status = fileDevice.getMessage_publish_status();
 
+
+        this.setNvsStorage(fileDevice.getNvs_used(), fileDevice.getNvs_free(), fileDevice.getNvs_total());
+        this.setSpiffsStorage(fileDevice.getSpiffs_used(), fileDevice.getSpiffs_total());
         this.setWifiStrength(fileDevice.getWifiSignalStrength());
         this.calculateIsActive();
     }

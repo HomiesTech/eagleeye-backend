@@ -1,5 +1,6 @@
 package com.homenetics.eagleeye.service;
 
+import com.homenetics.eagleeye.entity.DeviceCredEntity;
 import com.homenetics.eagleeye.models.CustomerModel;
 import com.homenetics.eagleeye.models.DeviceModel;
 import org.slf4j.Logger;
@@ -58,6 +59,22 @@ public class DatabaseService {
         } catch (Exception e) {
             logger.error("Error occurred while fetching all devices {}", e.getMessage());
             return Collections.emptyList();
+        }
+    }
+
+    public DeviceCredEntity getDeviceCredById(Integer id) {
+        String finalApi = databaseServiceUrl + "/devices/" + id + "/credentials";
+        try {
+            ResponseEntity<DeviceCredEntity> response = restTemplate.exchange(finalApi, HttpMethod.GET, null, DeviceCredEntity.class);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return response.getBody();
+            } else {
+                logger.error("getDeviceCredById, Response Not Successful. {}", response.getBody().toString());
+                return null;
+            }
+        } catch (Exception e) {
+            logger.error("Error occurred while fetching device {}", e.getMessage());
+            return null;
         }
     }
 

@@ -1,5 +1,6 @@
-package com.homenetics.eagleeye.merger;
+package com.homenetics.eagleeye.manager;
 
+import com.homenetics.eagleeye.collector.database.DeviceCredCache;
 import com.homenetics.eagleeye.collector.database.DevicesCache;
 import com.homenetics.eagleeye.collector.device.DevicesCollector;
 import com.homenetics.eagleeye.entity.BootTimeDeviceEntity;
@@ -16,12 +17,15 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-public class Devices {
+public class DevicesManager {
     private final ConcurrentHashMap<Integer, DeviceEntity> mergedDevices = new ConcurrentHashMap<>();
-    private static final Logger logger = LoggerFactory.getLogger(Devices.class);
+    private static final Logger logger = LoggerFactory.getLogger(DevicesManager.class);
 
     @Autowired
     private DevicesCache devicesCache;
+
+    @Autowired
+    private DeviceCredCache deviceCreds;
 
     @Autowired
     private DevicesCollector devicesCollector;
@@ -35,6 +39,8 @@ public class Devices {
             List<DeviceModel> dbDevices = devicesCache.getAllDevices();
             dbDevices.parallelStream().forEach(dbDevice -> {
                 DeviceEntity device = mergedDevices.getOrDefault(dbDevice.getDevId(), new DeviceEntity());
+                device.setSsid(deviceCreds.getDeviceSsid(dbDevice.getDevId()));
+                // logger.info("Device SSID: {} {}", device.getSsid(), deviceCreds.getDeviceSsid(dbDevice.getDevId()));
                 device.update(dbDevice);
                 mergedDevices.put(dbDevice.getDevId(), device);
             });
