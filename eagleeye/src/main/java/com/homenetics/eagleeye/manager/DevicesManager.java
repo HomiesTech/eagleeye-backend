@@ -6,7 +6,10 @@ import com.homenetics.eagleeye.collector.device.DevicesCollector;
 import com.homenetics.eagleeye.entity.BootTimeDeviceEntity;
 import com.homenetics.eagleeye.entity.DeviceEntity;
 import com.homenetics.eagleeye.entity.FileDeviceEntity;
+import com.homenetics.eagleeye.entity.MqttDeviceEntity;
 import com.homenetics.eagleeye.models.DeviceModel;
+import com.homenetics.eagleeye.service.DatabaseService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +33,9 @@ public class DevicesManager {
     @Autowired
     private DevicesCollector devicesCollector;
 
+    @Autowired
+    private DatabaseService databaseService;
+
     @Scheduled(fixedRate = 70000) // Every 60 seconds
     public void merge() {
         long startTime = System.currentTimeMillis(); // Record start time
@@ -40,6 +46,11 @@ public class DevicesManager {
             dbDevices.parallelStream().forEach(dbDevice -> {
                 DeviceEntity device = mergedDevices.getOrDefault(dbDevice.getDevId(), new DeviceEntity());
                 device.setSsid(deviceCreds.getDeviceSsid(dbDevice.getDevId()));
+                MqttDeviceEntity mqttDevice = databaseService.getDeviceOnlineDBStatus(dbDevice.getDevId());
+                if (mqttDevice != null) {
+                    device.setOnlineInDb(mqttDevice.getStatus());
+                    device.setOnlineTimeInDb(mqttDevice.getUpdatedAt());
+                }
                 // logger.info("Device SSID: {} {}", device.getSsid(), deviceCreds.getDeviceSsid(dbDevice.getDevId()));
                 device.update(dbDevice);
                 mergedDevices.put(dbDevice.getDevId(), device);

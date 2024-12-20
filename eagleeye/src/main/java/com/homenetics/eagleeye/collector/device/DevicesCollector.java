@@ -203,7 +203,8 @@ public class DevicesCollector {
             deviceEntity.setSpiffs_used(Integer.valueOf(deviceInfo.get("spiffs_used")));
             deviceEntity.setSpiffs_total(Integer.valueOf(deviceInfo.get("spiffs_total")));
             deviceEntity.setBoot_time_status_code(Integer.valueOf(deviceInfo.get("boot_status_code")));
-            deviceEntity.setMessage_publish_status(deviceInfo.get("message_publish_status").equals("1"));
+            deviceEntity.setMessage_publish_status(Integer.valueOf(deviceInfo.get("message_publish_status")));
+            // deviceEntity.setMessage_publish_status_fail_count(Integer.valueOf(deviceInfo.get("message_publish_status_fail_count")));
 
             CustomerModel tryOkCust;
             if (deviceInfo.get("change_cred_try") != null) {

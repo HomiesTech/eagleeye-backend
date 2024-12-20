@@ -48,8 +48,102 @@ public class AlarmManager {
             this.processMessageDeliveryStatus(device);
             this.processDeviceActiveState(device);
             this.processSignalStrength(device);
+            this.processOnlineComparisonAlarm(device);
+            this.processUsernameAlarm(device);
         });
         logger.info("Successfully refreshed alarms of all devices.");
+    }
+
+    public void processUsernameAlarm(DeviceEntity deviceEntity) {
+        AlarmEntity alarm = new AlarmEntity();
+        alarm.setKey("dev.cred.username");
+        alarm.setEntityId(deviceEntity.getDeviceId());
+        alarm.setEntityType("device");
+
+        AlarmEntity existingAlarm = activeAlarms.get(generateKey(alarm));
+
+        if (deviceEntity.getUsername() == null || deviceEntity.getUsername().isEmpty()) {
+            alarm.setStatus("NOT OK");
+            alarm.setDetail("Username is null");
+            alarm.setSeverity(SEVERITY_WARN);
+        } else if (deviceEntity.getUsername() == deviceEntity.getSsid()) {
+            alarm.setStatus("NOT OK");
+            alarm.setDetail("Username is same as SSID" + ", Username = " + deviceEntity.getUsername() + ", SSID = " + deviceEntity.getSsid());
+            alarm.setSeverity(SEVERITY_WARN);
+        } else {
+            alarm.setStatus("OK");
+            alarm.setDetail("Username is OK" + ", Username = " + deviceEntity.getUsername());
+            alarm.setSeverity(SEVERITY_OK);
+        }
+
+        if (existingAlarm != null) {
+            if (existingAlarm.getSeverity() != alarm.getSeverity()) {
+                this.moveToHistory(existingAlarm);
+                // as old alarm shifted to history
+                alarm.setStartTime(LocalDateTime.now());
+            }
+        } else {
+            activeAlarms.put(generateKey(alarm), alarm);
+        }
+
+        alarm.setLastUpdatedTime(LocalDateTime.now());
+        alarm.setDuration(this.getDuration(alarm.getStartTime()));
+        alarm.setState(true);
+        this.addAlarm(alarm);
+    }
+
+    public void processOnlineComparisonAlarm(DeviceEntity deviceEntity) {
+        AlarmEntity alarm = new AlarmEntity();
+        alarm.setKey("dev.online.status");
+        alarm.setEntityId(deviceEntity.getDeviceId());
+        alarm.setEntityType("device");
+
+        AlarmEntity existingAlarm = activeAlarms.get(generateKey(alarm));
+
+        if (deviceEntity.isOnline() == true && deviceEntity.isOnlineInDb() == true) {
+            // device is online
+            alarm.setStatus("up");
+            alarm.setDetail("Device is online" + ", Device isOnlineInDb ? = " + String.valueOf(deviceEntity.isOnlineInDb()) + ", Device isOnline ? = " + String.valueOf(deviceEntity.isOnline()));
+            alarm.setSeverity(SEVERITY_OK);
+        } else if (deviceEntity.isOnline() == false && deviceEntity.isOnlineInDb() == false) {
+            alarm.setStatus("down");
+            alarm.setDetail("Device is offline" + ", Device isOnlineInDb ? = " + String.valueOf(deviceEntity.isOnlineInDb()) + ", Device isOnline ? = " + String.valueOf(deviceEntity.isOnline()));
+            alarm.setSeverity(SEVERITY_OK);
+        } else if (deviceEntity.isOnline() == true && deviceEntity.isOnlineInDb() == false) {
+            alarm.setStatus("error");
+            alarm.setDetail("Device Online Connection Error" + ", Device isOnlineInDb ? = " + String.valueOf(deviceEntity.isOnlineInDb()) + ", Device isOnline ? = " + String.valueOf(deviceEntity.isOnline()));
+            alarm.setSeverity(SEVERITY_WARN);
+        } else if (deviceEntity.isOnline() == false && deviceEntity.isOnlineInDb() == true) {
+            alarm.setStatus("delay");
+            alarm.setDetail("Device is offline but delay update in db" + ", Device isOnlineInDb ? = " + String.valueOf(deviceEntity.isOnlineInDb()) + ", Device isOnline ? = " + String.valueOf(deviceEntity.isOnline()));
+            alarm.setSeverity(SEVERITY_WARN);
+        } else {
+            alarm.setStatus("unknown");
+            alarm.setDetail("Device is not online" + ", Device isOnlineInDb ? = " + String.valueOf(deviceEntity.isOnlineInDb()) + ", Device isOnline ? = " + String.valueOf(deviceEntity.isOnline()));
+            alarm.setSeverity(SEVERITY_ERROR);
+        }
+
+        if (existingAlarm != null) {
+            if (existingAlarm.getSeverity() != alarm.getSeverity() || existingAlarm.getStatus() != alarm.getStatus()) {
+                // alarm severity changed, push old alarm to history
+                this.moveToHistory(existingAlarm);
+                // as old alarm shifted to history
+                alarm.setStartTime(LocalDateTime.now());
+            } else {
+                alarm.setStartTime(existingAlarm.getStartTime());
+            }
+        }else{
+            alarm.setStartTime(LocalDateTime.now());
+        }
+
+        alarm.setLastUpdatedTime(LocalDateTime.now());
+        alarm.setDuration(this.getDuration(alarm.getStartTime()));
+        if (alarm.getDuration() != null && alarm.getDuration() >= 150 && alarm.getStatus() == "error") {
+            // if alarm duration is more then 3 minute, conver to error
+            alarm.setSeverity(SEVERITY_ERROR);
+        }
+        alarm.setState(true);
+        this.addAlarm(alarm);
     }
 
     public void processDeviceActiveState(DeviceEntity deviceEntity) {
@@ -74,7 +168,7 @@ public class AlarmManager {
             // device is not active
             alarm.setStatus("delay");
             alarm.setDetail("Device is not active");
-            alarm.setSeverity(SEVERITY_WARN);
+            alarm.setSeverity(SEVERITY_OK);
         } else {
             alarm.setStatus("unknown");
             alarm.setDetail("Device Active State = " + String.valueOf(deviceEntity.getActiveState()));
@@ -127,7 +221,7 @@ public class AlarmManager {
         } else if (deviceEntity.getSignalStrength() == 4 ) {
             alarm.setStatus("fair");
             alarm.setDetail("Signal Strength (Fair) = " + String.valueOf(deviceEntity.getSignalStrength()));
-            alarm.setSeverity(SEVERITY_WARN);
+            alarm.setSeverity(SEVERITY_OK);
         } else if (deviceEntity.getSignalStrength() == 5 ) {
             alarm.setStatus("bad");
             alarm.setDetail("Signal Strength (Poor) = " + String.valueOf(deviceEntity.getSignalStrength()));
@@ -169,17 +263,17 @@ public class AlarmManager {
             alarm.setStatus("unknown");
             alarm.setDetail("Message Publish Status = " + String.valueOf(deviceEntity.getMessage_publish_status()));
             alarm.setSeverity(SEVERITY_WARN);
-        } else if (deviceEntity.getMessage_publish_status() == true && deviceEntity.isOnline() == true) {
+        } else if (deviceEntity.getMessage_publish_status() == 1 && deviceEntity.isOnline() == true) {
             alarm.setStatus("ok");
             alarm.setDetail("Message Published, Device isOnline ? = " + String.valueOf(deviceEntity.isOnline()));
             alarm.setSeverity(SEVERITY_OK);
-        } else if (deviceEntity.getMessage_publish_status() == false && deviceEntity.isOnline() == true) {
+        } else if (deviceEntity.getMessage_publish_status() == 0 && deviceEntity.isOnline() == true) {
             alarm.setStatus("failed");
             alarm.setDetail("Message Not Published, Device isOnline ? = " + String.valueOf(deviceEntity.isOnline()));
             alarm.setSeverity(SEVERITY_ERROR);
-        } else if (deviceEntity.getMessage_publish_status() == false && deviceEntity.isOnline() == false) {
-            alarm.setStatus("ok");
-            alarm.setDetail("Message Not Published, Device isOnline ? = " + String.valueOf(deviceEntity.isOnline()));
+        } else if (deviceEntity.getMessage_publish_status() == -1 && deviceEntity.isOnline() == false) {
+            alarm.setStatus("Not Started");
+            alarm.setDetail("Message Publish Not Started, Device isOnline ? = " + String.valueOf(deviceEntity.isOnline()));
             alarm.setSeverity(SEVERITY_OK);
         } else {
             alarm.setStatus("unknown");

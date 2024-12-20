@@ -45,8 +45,10 @@ public class DeviceEntity {
     private List<SpiffsStorageEntity> spiffsStorage;
     private Integer DownloadMqttUrlResponseCode;
     private Long millis;
-    private Boolean message_publish_status;
+    private Integer message_publish_status;
     private Integer boot_status_code;
+    private boolean isOnlineInDb;
+    private LocalDateTime onlineTimeInDb;
     /**
      * 1 - Excellent
      * 2 - Very good

@@ -31,7 +31,8 @@ public class FileDeviceEntity {
     private Integer nvs_total;
     private Integer spiffs_total;
     private Integer spiffs_used;
-    private Boolean message_publish_status;
+    private Integer message_publish_status;
+    private Integer message_publish_status_fail_count;
     private Integer boot_time_status_code;
 
     public FileDeviceEntity() {
