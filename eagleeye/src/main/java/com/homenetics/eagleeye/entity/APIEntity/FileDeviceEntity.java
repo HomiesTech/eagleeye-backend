@@ -1,10 +1,10 @@
-package com.homenetics.eagleeye.entity;
+package com.homenetics.eagleeye.entity.APIEntity;
 
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+// import java.util.ArrayList;
+// import java.util.List;
 
 @Data
 public class FileDeviceEntity {
@@ -17,13 +17,17 @@ public class FileDeviceEntity {
     private LocalDateTime syncTime;
     private String codeVersion;
     private String applianceState;
-    private List<DeviceUserEntity> deviceUsers;
+    // private List<DeviceUserEntity> deviceUsers;
     private boolean powersave;
     private String username;
-    private DeviceUserEntity otaTry;
-    private DeviceUserEntity otaOk;
-    private DeviceUserEntity credChangeTry;
-    private DeviceUserEntity credChangeOk;
+    private String otaTry;
+    private String otaOk;
+    private String credChangeTry;
+    private String credChangeOk;
+    // private DeviceUserEntity otaTry;
+    // private DeviceUserEntity otaOk;
+    // private DeviceUserEntity credChangeTry;
+    // private DeviceUserEntity credChangeOk;
     private Integer DownloadMqttUrlResponseCode;
     private Long millis;
     private Integer nvs_used;
@@ -36,7 +40,7 @@ public class FileDeviceEntity {
     private Integer boot_time_status_code;
 
     public FileDeviceEntity() {
-        this.deviceUsers = new ArrayList<>();
+        // this.deviceUsers = new ArrayList<>();
     }
 
     public void setMacAddress(String macAddress) {
@@ -47,7 +51,7 @@ public class FileDeviceEntity {
         return macAddress.replace("_", ":");
     }
 
-    public void setDeviceUser(DeviceUserEntity deviceUser) {
-        this.deviceUsers.add(deviceUser);
-    }
+    // public void setDeviceUser(DeviceUserEntity deviceUser) {
+    //     this.deviceUsers.add(deviceUser);
+    // }
 }

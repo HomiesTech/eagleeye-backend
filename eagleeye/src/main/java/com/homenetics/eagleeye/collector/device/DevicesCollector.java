@@ -1,10 +1,9 @@
 package com.homenetics.eagleeye.collector.device;
 
-import com.homenetics.eagleeye.collector.database.CustomersCache;
-import com.homenetics.eagleeye.entity.BootTimeDeviceEntity;
-import com.homenetics.eagleeye.entity.DeviceUserEntity;
-import com.homenetics.eagleeye.entity.FileDeviceEntity;
-import com.homenetics.eagleeye.models.CustomerModel;
+import com.homenetics.eagleeye.entity.APIEntity.BootTimeDeviceEntity;
+import com.homenetics.eagleeye.entity.APIEntity.FileDeviceEntity;
+import com.homenetics.eagleeye.repository.DeviceRepository;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,36 +22,22 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class DevicesCollector {
     private final List<FileDeviceEntity> fileDevices = new ArrayList<>();
-    private final List<BootTimeDeviceEntity> bootTimeDevices = new ArrayList<>();
+    // private final List<BootTimeDeviceEntity> bootTimeDevices = new ArrayList<>();
     private static final Logger logger = LoggerFactory.getLogger(DevicesCollector.class);
 
     @Autowired
-    private CustomersCache customers;
+    private DeviceRepository deviceRepository;
 
 
-//    private static final String DeviceDataPath = "D:\\DATA\\data";
-    private static final String DeviceDataPath = "/var/homenetics/devices/data";
+   private static final String DeviceDataPath = "D:\\DATA\\data";
+    // private static final String DeviceDataPath = "/var/homenetics/devices/data";
     public synchronized List<FileDeviceEntity> getAllFileDevices() {
         return new ArrayList<>(fileDevices);
     }
 
-    public synchronized  List<BootTimeDeviceEntity> getAllDeviceBootTime() {
-        return new ArrayList<>(bootTimeDevices);
-    }
-
-    private synchronized void updateFileDevices(List<FileDeviceEntity> newDevices) {
-        fileDevices.clear();
-        fileDevices.addAll(newDevices);
-    }
-
-    private synchronized  void updateBootTimeDevices(List<BootTimeDeviceEntity> newDevices) {
-        bootTimeDevices.clear();
-        bootTimeDevices.addAll(newDevices);
-    }
-
     @Scheduled(fixedRate = 65000)
     public void bootTimeCollector() {
-        bootTimeDevices.clear();
+        // bootTimeDevices.clear();
         try {
             String deviceDataPath = DeviceDataPath;
             File baseFolder = new File(deviceDataPath);
@@ -73,7 +58,8 @@ public class DevicesCollector {
                         if (deviceBootFile.exists() && deviceBootFile.isFile()) {
                             BootTimeDeviceEntity bootTimeDeviceEntity = createBootTimeDeviceEntity(deviceBootFile, macFolder);
                             if (bootTimeDeviceEntity != null) {
-                                newDevices.add(bootTimeDeviceEntity); // Thread-safe addition to the synchronized list
+                                deviceRepository.updateBootTimeDevice(bootTimeDeviceEntity.getMacAddress(), bootTimeDeviceEntity.getBootTime());
+                                // newDevices.add(bootTimeDeviceEntity); // Thread-safe addition to the synchronized list
                                 logger.info("Processed device file: {}", deviceBootFile.getName());
                             }
                         } else {
@@ -82,7 +68,7 @@ public class DevicesCollector {
                     });
 
             if (!newDevices.isEmpty()) {
-                updateBootTimeDevices(newDevices);
+                // updateBootTimeDevices(newDevices);
                 logger.info("Updated devices boot time with {} new entries.", newDevices.size());
             }
         } catch (Exception e) {
@@ -115,7 +101,6 @@ public class DevicesCollector {
             }
 
             String timePattern = String.format("_%02d%02d", currentHour, targetMinute);
-            List<FileDeviceEntity> newDevices = Collections.synchronizedList(new ArrayList<>());
 
             // Process each folder in parallel
             Arrays.stream(Objects.requireNonNull(baseFolder.listFiles(File::isDirectory)))
@@ -135,8 +120,34 @@ public class DevicesCollector {
 
                         if (deviceFile.exists() && deviceFile.isFile()) {
                             FileDeviceEntity deviceEntity = createFileDeviceEntity(deviceFile, macFolder);
+                            logger.info("Processed device file: {}, {}", deviceFile.getName(), deviceEntity);
                             if (deviceEntity != null) {
-                                newDevices.add(deviceEntity); // Thread-safe addition to the synchronized list
+                                deviceRepository.updateFileDevice(
+                                        deviceEntity.getMacAddress(),
+                                        deviceEntity.getDeviceName(),
+                                        deviceEntity.getIpAddress(),
+                                        deviceEntity.getCodeVersion(),
+                                        deviceEntity.getSyncTime(),
+                                        deviceEntity.isOnline(),
+                                        deviceEntity.getApplianceState(),
+                                        deviceEntity.isPowersave(),
+                                        deviceEntity.getUsername(),
+                                        deviceEntity.getOtaTry(),
+                                        deviceEntity.getOtaOk(),
+                                        deviceEntity.getCredChangeTry(),
+                                        deviceEntity.getCredChangeOk(),
+                                        deviceEntity.getWifiSignalStrength(),
+                                        deviceEntity.getNvs_used(),
+                                        deviceEntity.getNvs_free(),
+                                        deviceEntity.getNvs_total(),
+                                        deviceEntity.getSpiffs_used(),
+                                        deviceEntity.getSpiffs_total(),
+                                        deviceEntity.getDownloadMqttUrlResponseCode(),
+                                        deviceEntity.getMillis(),
+                                        deviceEntity.getMessage_publish_status(),
+                                        deviceEntity.getUsers(),
+                                        now
+                                );
                                 logger.info("Processed device file: {}", deviceFile.getName());
                             }
                         } else {
@@ -144,11 +155,6 @@ public class DevicesCollector {
                             logger.warn("No matching file found for the generated filename: {}", generatedFilename);
                         }
                     });
-
-            if (!newDevices.isEmpty()) {
-                updateFileDevices(newDevices);
-                logger.info("Updated devices with {} new entries.", newDevices.size());
-            }
 
         } catch (Exception e) {
             logger.error("Error during device collection: {}", e.getMessage(), e);
@@ -204,60 +210,63 @@ public class DevicesCollector {
             deviceEntity.setSpiffs_total(Integer.valueOf(deviceInfo.get("spiffs_total")));
             deviceEntity.setBoot_time_status_code(Integer.valueOf(deviceInfo.get("boot_status_code")));
             deviceEntity.setMessage_publish_status(Integer.valueOf(deviceInfo.get("message_publish_status")));
+            deviceEntity.setOtaOk(deviceInfo.get("ota_ok"));
+            deviceEntity.setOtaTry(deviceInfo.get("ota_try"));
+            deviceEntity.setCredChangeOk(deviceInfo.get("change_cred_ok"));
+            deviceEntity.setCredChangeOk(deviceInfo.get("change_cred_try"));
             // deviceEntity.setMessage_publish_status_fail_count(Integer.valueOf(deviceInfo.get("message_publish_status_fail_count")));
 
-            CustomerModel tryOkCust;
-            if (deviceInfo.get("change_cred_try") != null) {
-                DeviceUserEntity changeCredTryUser = new DeviceUserEntity();
-                tryOkCust = customers.getCustomerByCode(deviceInfo.get("change_cred_try"));
-                if (tryOkCust != null) {
-                    changeCredTryUser.setCustomerId(tryOkCust.getId());
-                    changeCredTryUser.setName(tryOkCust.getName());
-                    changeCredTryUser.setUserCode(deviceInfo.get("change_cred_try"));
-                }
-                deviceEntity.setCredChangeTry(changeCredTryUser);
-            }
+            // CustomerModel tryOkCust;
+            // if (deviceInfo.get("change_cred_try") != null) {
+            //     DeviceUserEntity changeCredTryUser = new DeviceUserEntity();
+            //     tryOkCust = customers.getCustomerByCode(deviceInfo.get("change_cred_try"));
+            //     if (tryOkCust != null) {
+            //         changeCredTryUser.setCustomerId(tryOkCust.getId());
+            //         changeCredTryUser.setName(tryOkCust.getName());
+            //         changeCredTryUser.setUserCode(deviceInfo.get("change_cred_try"));
+            //     }
+            //     deviceEntity.setCredChangeTry(changeCredTryUser);
+            // }
 
-            if (deviceInfo.get("change_cred_ok") != null) {
-                DeviceUserEntity changeCredTryOk = new DeviceUserEntity();
-                tryOkCust = customers.getCustomerByCode(deviceInfo.get("change_cred_ok"));
-                if (tryOkCust != null) {
-                    changeCredTryOk.setCustomerId(tryOkCust.getId());
-                    changeCredTryOk.setName(tryOkCust.getName());
-                    changeCredTryOk.setUserCode(deviceInfo.get("change_cred_ok"));
-                }
-                deviceEntity.setCredChangeOk(changeCredTryOk);
-            }
+            // if (deviceInfo.get("change_cred_ok") != null) {
+            //     DeviceUserEntity changeCredTryOk = new DeviceUserEntity();
+            //     tryOkCust = customers.getCustomerByCode(deviceInfo.get("change_cred_ok"));
+            //     if (tryOkCust != null) {
+            //         changeCredTryOk.setCustomerId(tryOkCust.getId());
+            //         changeCredTryOk.setName(tryOkCust.getName());
+            //         changeCredTryOk.setUserCode(deviceInfo.get("change_cred_ok"));
+            //     }
+            //     deviceEntity.setCredChangeOk(changeCredTryOk);
+            // }
 
-            if (deviceInfo.get("ota_try") != null) {
-                DeviceUserEntity otaTryUser = new DeviceUserEntity();
-                tryOkCust = customers.getCustomerByCode(deviceInfo.get("ota_try"));
-                if (tryOkCust != null) {
-                    otaTryUser.setCustomerId(tryOkCust.getId());
-                    otaTryUser.setName(tryOkCust.getName());
-                    otaTryUser.setUserCode(deviceInfo.get("ota_try"));
-                }
-                deviceEntity.setOtaTry(otaTryUser);
-            }
+            // if (deviceInfo.get("ota_try") != null) {
+            //     DeviceUserEntity otaTryUser = new DeviceUserEntity();
+            //     tryOkCust = customers.getCustomerByCode(deviceInfo.get("ota_try"));
+            //     if (tryOkCust != null) {
+            //         otaTryUser.setCustomerId(tryOkCust.getId());
+            //         otaTryUser.setName(tryOkCust.getName());
+            //         otaTryUser.setUserCode(deviceInfo.get("ota_try"));
+            //     }
+            //     deviceEntity.setOtaTry(otaTryUser);
+            // }
 
-            if (deviceInfo.get("ota_ok") != null) {
-                DeviceUserEntity otaTryOk = new DeviceUserEntity();
-                tryOkCust = customers.getCustomerByCode(deviceInfo.get("ota_ok"));
-                if (tryOkCust != null) {
-                    otaTryOk.setCustomerId(tryOkCust.getId());
-                    otaTryOk.setName(tryOkCust.getName());
-                    otaTryOk.setUserCode(deviceInfo.get("ota_ok"));
-                }
-                deviceEntity.setOtaOk(otaTryOk);
-            }
+            // if (deviceInfo.get("ota_ok") != null) {
+            //     DeviceUserEntity otaTryOk = new DeviceUserEntity();
+            //     tryOkCust = customers.getCustomerByCode(deviceInfo.get("ota_ok"));
+            //     if (tryOkCust != null) {
+            //         otaTryOk.setCustomerId(tryOkCust.getId());
+            //         otaTryOk.setName(tryOkCust.getName());
+            //         otaTryOk.setUserCode(deviceInfo.get("ota_ok"));
+            //     }
+            //     deviceEntity.setOtaOk(otaTryOk);
+            // }
 
             deviceEntity.setDownloadMqttUrlResponseCode(deviceInfo.get("download_mqtt_url_res_code") != null ? Integer.valueOf(deviceInfo.get("download_mqtt_url_res_code")) : -99);
             deviceEntity.setMillis(Long.valueOf(deviceInfo.get("millis")));
             deviceEntity.setUsername(deviceInfo.get("username"));
-
-            logger.warn("[FileDeviceEntity] {}", deviceEntity);
             // Parse sync_time to LocalDateTime
             String syncTimeString = deviceInfo.get("sync_time");
+            logger.info("sync_time: {}", syncTimeString);
             if (syncTimeString != null) {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                 LocalDateTime syncTime = LocalDateTime.parse(syncTimeString, formatter);
@@ -265,30 +274,31 @@ public class DevicesCollector {
             }
 
             deviceEntity.setUsers(deviceInfo.get("users"));
+            logger.warn("[FileDeviceEntity] {}", deviceEntity);
 
-            String[] userRecords = deviceInfo.get("users").split("\\|");
-            for (String userRecord : userRecords) {
-                if (!userRecord.trim().isEmpty()) {
-                    // Split each record by "," to extract user details
-                    String[] userDetails = userRecord.split(",");
-                    if (userDetails.length == 3) { // Ensure all details are present
-                        String userCode = userDetails[0];
-                        String userIpAddress = userDetails[1];
-                        String userFailureCount = userDetails[2];
-                        DeviceUserEntity deviceUserEntity = new DeviceUserEntity();
-                        deviceUserEntity.setUserCode(userCode);
-                        deviceUserEntity.setUserIpAddress(userIpAddress);
-                        deviceUserEntity.setUserFailureCount(userFailureCount);
+            // String[] userRecords = deviceInfo.get("users").split("\\|");
+            // for (String userRecord : userRecords) {
+            //     if (!userRecord.trim().isEmpty()) {
+            //         // Split each record by "," to extract user details
+            //         String[] userDetails = userRecord.split(",");
+            //         if (userDetails.length == 3) { // Ensure all details are present
+            //             String userCode = userDetails[0];
+            //             String userIpAddress = userDetails[1];
+            //             String userFailureCount = userDetails[2];
+            //             DeviceUserEntity deviceUserEntity = new DeviceUserEntity();
+            //             deviceUserEntity.setUserCode(userCode);
+            //             deviceUserEntity.setUserIpAddress(userIpAddress);
+            //             deviceUserEntity.setUserFailureCount(userFailureCount);
 
-                        CustomerModel customer = customers.getCustomerByCode(userCode);
-                        if (customer != null) {
-                            deviceUserEntity.setCustomerId(customer.getId());
-                            deviceUserEntity.setName(customer.getName());
-                        }
-                        deviceEntity.setDeviceUser(deviceUserEntity);
-                    }
-                }
-            }
+            //             CustomerModel customer = customers.getCustomerByCode(userCode);
+            //             if (customer != null) {
+            //                 deviceUserEntity.setCustomerId(customer.getId());
+            //                 deviceUserEntity.setName(customer.getName());
+            //             }
+            //             // deviceEntity.setDeviceUser(deviceUserEntity);
+            //         }
+            //     }
+            // }
             return deviceEntity;
         } catch (Exception e) {
             logger.error("Error creating FileDeviceEntity for file: {}", deviceFile.getName(), e);

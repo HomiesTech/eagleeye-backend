@@ -1,4 +1,4 @@
-package com.homenetics.eagleeye.entity;
+package com.homenetics.eagleeye.entity.APIEntity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;

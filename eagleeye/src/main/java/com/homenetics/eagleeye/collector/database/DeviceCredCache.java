@@ -1,6 +1,6 @@
 package com.homenetics.eagleeye.collector.database;
 
-import com.homenetics.eagleeye.entity.DeviceCredEntity;
+import com.homenetics.eagleeye.entity.APIEntity.DeviceCredEntity;
 import com.homenetics.eagleeye.service.DatabaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,17 +1,16 @@
 package com.homenetics.eagleeye.controller;
 
-
-import com.homenetics.eagleeye.entity.DeviceEntity;
-import com.homenetics.eagleeye.manager.DevicesManager;
+import com.homenetics.eagleeye.entity.DBEntity.DeviceDBEntity;
+import com.homenetics.eagleeye.repository.DeviceRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/eagleeye/devices")
@@ -19,15 +18,18 @@ import java.util.List;
 public class DevicesController {
 
     @Autowired
-    private DevicesManager devices;
+    private DeviceRepository deviceRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(DevicesController.class);
 
     @GetMapping("")
-    public ResponseEntity<List<DeviceEntity>> getAllDevices() {
+    public ResponseEntity<Page<DeviceDBEntity>> getAllDevices(
+        @RequestParam(value = "page", defaultValue = "0") Integer page,
+        @RequestParam(value = "size", defaultValue = "10") Integer size
+    ) {
         try {
-            List<DeviceEntity> devices = this.devices.getAllDevices();
-            return new ResponseEntity<>(devices, HttpStatus.OK);
+            Page<DeviceDBEntity> devicesPage = this.deviceRepository.findAll(PageRequest.of(page, size));
+            return new ResponseEntity<>(devicesPage, HttpStatus.OK);
         } catch (Exception e) {
             logger.error("An error occurred while fetching devices: {}", e.getMessage(), e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -35,9 +37,9 @@ public class DevicesController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DeviceEntity> getDeviceById(@PathVariable("id") String id) {
+    public ResponseEntity<DeviceDBEntity> getDeviceById(@PathVariable("id") String id) {
         try {
-            DeviceEntity device = this.devices.getDeviceById(Integer.valueOf(id));
+            DeviceDBEntity device = this.deviceRepository.findById(Integer.valueOf(id)).orElse(null);
             if (device == null) {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }else {

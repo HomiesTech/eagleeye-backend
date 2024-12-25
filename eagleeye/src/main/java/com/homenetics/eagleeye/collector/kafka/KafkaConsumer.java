@@ -9,8 +9,9 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.homenetics.eagleeye.entity.KafkaMessageEntity;
+import com.homenetics.eagleeye.entity.KafkaEntity.KafkaMessageEntity;
 import com.homenetics.eagleeye.models.DeviceModel;
+import com.homenetics.eagleeye.models.MqttDeviceModel;
 import com.homenetics.eagleeye.repository.DeviceRepository;
 import com.homenetics.eagleeye.util.ObjectMapperProvider;
 
@@ -23,8 +24,8 @@ public class KafkaConsumer {
     private DeviceRepository deviceRepository;
 
     @KafkaListener(topics = "devices", groupId = "group_id")
-    public void consume(String message) {
-        logger.info("[KafkaConsumer] Consumed message: " + message);
+    public void consumeDevices(String message) {
+        logger.info("[KafkaConsumer] Consumed message: " + message); // TODO - Change to debug
         // Consumed message: {"action":"create","device":{"devId":24,"userId":null,"macAddress":"00:11B:44:11:3A:B7","createdAt":"2024-12-20T19:27:37.443Z","updatedAt":"2024-12-20T19:27:37.443Z","lastConnectionAt":null}}
 
         ObjectMapper objectMapper = ObjectMapperProvider.getObjectMapper();
@@ -51,6 +52,27 @@ public class KafkaConsumer {
         } catch (Exception e) {
             logger.error("[KafkaConsumer] Error: " + e.getMessage() + " | " + e.getStackTrace());
         }
+    }
 
+    @KafkaListener(topics = "mqtt-dev-connection", groupId = "group_id")
+    public void consumeMqttDeviceConnection(String message) {
+        logger.info("[KafkaConsumer] Consumed message: " + message); // TODO - Change to debug
+
+        ObjectMapper objectMapper = ObjectMapperProvider.getObjectMapper();
+        try {
+            KafkaMessageEntity<MqttDeviceModel> kafkaMessage = objectMapper.readValue(message,
+                                                objectMapper.getTypeFactory().constructParametricType(KafkaMessageEntity.class, MqttDeviceModel.class));
+            String action = kafkaMessage.getAction();
+            MqttDeviceModel mqttDevice = kafkaMessage.getData();
+
+            if ("create".equals(action) || "update".equals(action)) {
+                deviceRepository.upsertDBMqttConnection(mqttDevice.getDevId(), mqttDevice.getStatus());
+            } else if ("delete".equals(action)) {
+                deviceRepository.deleteDeviceById(mqttDevice.getDevId());
+                logger.error("[KafkaConsumer] Invalid action: " + action);
+            }
+        } catch (Exception e) {
+            logger.error("[KafkaConsumer] Error: " + e.getMessage() + " | " + e.getStackTrace());
+        }
     }
 }

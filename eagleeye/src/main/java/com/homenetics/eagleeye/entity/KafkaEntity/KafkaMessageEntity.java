@@ -1,4 +1,4 @@
-package com.homenetics.eagleeye.entity;
+package com.homenetics.eagleeye.entity.KafkaEntity;
 import lombok.Data;
 
 @Data

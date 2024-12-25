@@ -1,119 +1,108 @@
 package com.homenetics.eagleeye.manager;
 
-import com.homenetics.eagleeye.collector.database.DeviceCredCache;
-import com.homenetics.eagleeye.collector.database.DevicesCache;
-import com.homenetics.eagleeye.collector.device.DevicesCollector;
-import com.homenetics.eagleeye.entity.BootTimeDeviceEntity;
-import com.homenetics.eagleeye.entity.DeviceEntity;
-import com.homenetics.eagleeye.entity.FileDeviceEntity;
-import com.homenetics.eagleeye.entity.MqttDeviceEntity;
-import com.homenetics.eagleeye.models.DeviceModel;
-import com.homenetics.eagleeye.service.DatabaseService;
+import com.homenetics.eagleeye.entity.APIEntity.DeviceEntity;
+import com.homenetics.eagleeye.entity.DBEntity.DeviceDBEntity;
+import com.homenetics.eagleeye.repository.DeviceRepository;
+import com.homenetics.eagleeye.repository.DTO.ActiveStateDTO;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Component
 public class DevicesManager {
+    private static final Integer MIN_ACTIVE_MINUTE = 3;
+    private static final Integer MAX_ACTIVE_MINUTE = 5;
     private final ConcurrentHashMap<Integer, DeviceEntity> mergedDevices = new ConcurrentHashMap<>();
     private static final Logger logger = LoggerFactory.getLogger(DevicesManager.class);
 
     @Autowired
-    private DevicesCache devicesCache;
-
-    @Autowired
-    private DeviceCredCache deviceCreds;
-
-    @Autowired
-    private DevicesCollector devicesCollector;
-
-    @Autowired
-    private DatabaseService databaseService;
-
-    @Scheduled(fixedRate = 70000) // Every 60 seconds
-    public void merge() {
-        long startTime = System.currentTimeMillis(); // Record start time
-        try {
-            logger.info("Starting combined device cache refresh...");
-            // Process dbDevices in parallel
-            List<DeviceModel> dbDevices = devicesCache.getAllDevices();
-            dbDevices.parallelStream().forEach(dbDevice -> {
-                DeviceEntity device = mergedDevices.getOrDefault(dbDevice.getDevId(), new DeviceEntity());
-                device.setSsid(deviceCreds.getDeviceSsid(dbDevice.getDevId()));
-                MqttDeviceEntity mqttDevice = databaseService.getDeviceOnlineDBStatus(dbDevice.getDevId());
-                if (mqttDevice != null) {
-                    device.setOnlineInDb(mqttDevice.getStatus());
-                    device.setOnlineTimeInDb(mqttDevice.getUpdatedAt());
-                }
-                // logger.info("Device SSID: {} {}", device.getSsid(), deviceCreds.getDeviceSsid(dbDevice.getDevId()));
-                device.update(dbDevice);
-                mergedDevices.put(dbDevice.getDevId(), device);
-            });
-
-            // Process fileDevices in parallel
-            List<FileDeviceEntity> fileDevices = devicesCollector.getAllFileDevices();
-            List<BootTimeDeviceEntity> devicesBootTime = devicesCollector.getAllDeviceBootTime();
-
-            fileDevices.parallelStream().forEach(fileDevice -> {
-                Integer deviceId = devicesCache.getIdByMacAddress(fileDevice.getMacAddress());
-                if (deviceId != null) {
-                    DeviceEntity device = mergedDevices.getOrDefault(deviceId, null);
-                    if (device != null) {
-                        device.update(fileDevice);
-                        mergedDevices.put(deviceId, device);
-                    }
-                }
-            });
-
-            devicesBootTime.parallelStream().forEach(deviceBootTime -> {
-                Integer deviceId = devicesCache.getIdByMacAddress(deviceBootTime.getMacAddress());
-                if (deviceId != null) {
-                    DeviceEntity device = mergedDevices.getOrDefault(deviceId, null);
-                    if (device != null) {
-                        device.update(deviceBootTime);
-                        mergedDevices.put(deviceId, device);
-                    }
-                }
-            });
-
-            long endTime = System.currentTimeMillis(); // Record end time
-            long duration = endTime - startTime; // Calculate duration
-            logger.info("Combined device cache refresh completed. Total devices: {} in {} ms", mergedDevices.size(), duration);
-        } catch (Exception e) {
-            logger.error("Error refreshing combined device: {}", e.getMessage(), e);
-        }
-    }
+    private DeviceRepository deviceRepository;
 
     @Scheduled(fixedRate = 60000)
     public void refreshActiveState() {
         logger.info("Starting refreshActiveState of devices. Total devices: {}", mergedDevices.size());
         try {
             // Parallelize the processing of devices
-            mergedDevices.values().parallelStream().forEach(device -> {
-                try {
-                    device.calculateIsActive();
-                } catch (Exception e) {
-                    logger.error("Error calculating active state for device {}: {}", device.getDeviceId(), e.getMessage(), e);
-                }
-            });
+            Integer page = 0;
+            Integer size = 100;
+            Page<ActiveStateDTO> devicePage;
+            do {
+                Pageable pageable = PageRequest.of(page, size);
+                devicePage = deviceRepository.findActiveDevices(pageable);
+                logger.info("Devices: " + devicePage.toString());
+                List<ActiveStateDTO> updatedDevices = devicePage.getContent()
+                        .parallelStream()
+                        .peek(device -> {
+                            try {
+                                calculateIsActive(device);
+                            } catch (Exception e) {
+                                logger.error("Error calculating active state for device ID {}: {}",
+                                        device.getDeviceId(), e.getMessage(), e);
+                            }
+                        })
+                        .collect(Collectors.toList());
+
+                // Save updated devices back to the database
+                saveActiveStates(updatedDevices);
+                page++;
+
+            } while (devicePage.hasNext());
+
             logger.info("Successfully refreshed active state of all devices.");
         } catch (Exception e) {
             logger.error("Error refreshing calculateActiveState of devices: {}", e.getMessage(), e);
         }
     }
 
-    public DeviceEntity getDeviceById(Integer id) {
-        return mergedDevices.get(id);
+    /**
+     * Calculate active state for a single device based on syncTime.
+     */
+    private void calculateIsActive(ActiveStateDTO device) {
+        LocalDateTime now = LocalDateTime.now();
+        logger.info("Calculating active state for device ID: {} at time: {}", device.getDeviceId(), now);
+        LocalDateTime syncTime = device.getSyncTime();
+        if (syncTime != null) {
+            long minuteDifference = Duration.between(syncTime, now).toMinutes();
+            if (minuteDifference >= 0 && minuteDifference < MIN_ACTIVE_MINUTE) {
+                device.setActiveState(1); // ACTIVE
+            } else if (minuteDifference >= MIN_ACTIVE_MINUTE && minuteDifference < MAX_ACTIVE_MINUTE) {
+                device.setActiveState(2); // WARN
+            } else {
+                device.setActiveState(0); // OFFLINE
+            }
+        } else {
+            device.setActiveState(0); // Default to OFFLINE
+        }
     }
 
-    public List<DeviceEntity> getAllDevices() {
-        return List.copyOf(mergedDevices.values());
+    /**
+     * Save the updated active states back to the database.
+     */
+    private void saveActiveStates(List<ActiveStateDTO> devices) {
+        // Convert DTOs back to entities or use update queries as required
+        List<DeviceDBEntity> entities = devices.stream()
+                .map(dto -> {
+                    DeviceDBEntity entity = deviceRepository.findById(dto.getDeviceId())
+                            .orElseThrow(() -> new RuntimeException("Device not found with ID: " + dto.getDeviceId()));
+                    entity.setActiveState(dto.getActiveState());
+                    return entity;
+                })
+                .collect(Collectors.toList());
+
+        deviceRepository.saveAll(entities);
+        logger.info("Saved {} devices' active states to the database.", entities.size());
     }
 
 }

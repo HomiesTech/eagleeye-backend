@@ -1,4 +1,4 @@
-package com.homenetics.eagleeye.entity;
+package com.homenetics.eagleeye.entity.DBEntity;
 
 
 import java.time.LocalDateTime;
@@ -50,16 +50,16 @@ public class DeviceDBEntity {
     @Column
     private LocalDateTime bootTime;
 
-    @Column
+    @Column(columnDefinition = "INTEGER DEFAULT 0")
     private Integer activeState = 0; // 0,1,2 | 0: InActive, 1: Active, 2: between MIN_ACTIVE_MINUTE and MAX_ACTIVE_MINUTE
     
-    @Column
-    private boolean isOnline;
+    @Column(columnDefinition = "BIT DEFAULT 0")
+    private boolean isOnline = false;
 
     @Column
     private String applianceState;
 
-    @Column
+    @Column(columnDefinition = "BIT DEFAULT 0")
     private boolean powersave;
 
     @Column
@@ -81,10 +81,19 @@ public class DeviceDBEntity {
     private Integer wifiSignalStrength;
 
     @Column
-    private Integer nvsStorage;
+    private Integer nvs_used;
 
     @Column
-    private Integer spiffsStorage;
+    private Integer nvs_free;
+
+    @Column
+    private Integer nvs_total;
+
+    @Column
+    private Integer spiffs_used;
+
+    @Column
+    private Integer spiffs_total;
 
     @Column
     private Integer DownloadMqttUrlResponseCode;
@@ -98,7 +107,7 @@ public class DeviceDBEntity {
     @Column
     private Integer boot_status_code;
 
-    @Column
+    @Column(columnDefinition = "BIT DEFAULT 0")
     private boolean isOnlineInDb;
 
     @Column

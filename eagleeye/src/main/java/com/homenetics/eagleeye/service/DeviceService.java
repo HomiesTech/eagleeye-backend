@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.homenetics.eagleeye.entity.DeviceDBEntity;
+import com.homenetics.eagleeye.entity.DBEntity.DeviceDBEntity;
 import com.homenetics.eagleeye.repository.DeviceRepository;
 
 public class DeviceService {

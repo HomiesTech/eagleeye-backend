@@ -1,4 +1,4 @@
-package com.homenetics.eagleeye.entity;
+package com.homenetics.eagleeye.entity.APIEntity;
 
 import com.homenetics.eagleeye.models.DeviceModel;
 import lombok.Data;
@@ -70,7 +70,7 @@ public class DeviceEntity {
     public void calculateIsActive() {
         LocalDateTime now = LocalDateTime.now();
         logger.info("Calculating active state for device ID: {} at time: {}", this.deviceId, now);
-        if (syncTime != null ) {
+        if (syncTime != null) {
             logger.info("SyncTime for device ID {}: {}", this.deviceId, syncTime);
             long minuteDifference = Duration.between(syncTime, now).toMinutes();
             logger.info("Time difference in minutes for device ID {}: {}", this.deviceId, minuteDifference);
@@ -148,12 +148,12 @@ public class DeviceEntity {
         this.syncTime = fileDevice.getSyncTime();
         this.isOnline = fileDevice.isOnline();
         this.users = fileDevice.getUsers();
-        this.deviceUsers = fileDevice.getDeviceUsers();
+        // this.deviceUsers = fileDevice.getDeviceUsers();
         this.username = fileDevice.getUsername();
-        this.credChangeOk = fileDevice.getCredChangeOk();
-        this.credChangeTry = fileDevice.getCredChangeTry();
-        this.otaOk = fileDevice.getOtaOk();
-        this.otaTry = fileDevice.getOtaTry();
+        // this.credChangeOk = fileDevice.getCredChangeOk();
+        // this.credChangeTry = fileDevice.getCredChangeTry();
+        // this.otaOk = fileDevice.getOtaOk();
+        // this.otaTry = fileDevice.getOtaTry();
         this.millis = fileDevice.getMillis();
         this.DownloadMqttUrlResponseCode = fileDevice.getDownloadMqttUrlResponseCode();
         this.powersave = fileDevice.isPowersave();

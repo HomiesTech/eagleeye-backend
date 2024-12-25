@@ -1,9 +1,9 @@
 package com.homenetics.eagleeye.service;
 
-import com.homenetics.eagleeye.entity.DeviceCredEntity;
-import com.homenetics.eagleeye.entity.MqttDeviceEntity;
+import com.homenetics.eagleeye.entity.APIEntity.DeviceCredEntity;
 import com.homenetics.eagleeye.models.CustomerModel;
 import com.homenetics.eagleeye.models.DeviceModelWrapper;
+import com.homenetics.eagleeye.models.MqttDeviceModel;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,10 +84,10 @@ public class DatabaseService {
     }
 
     @SuppressWarnings("null")
-    public MqttDeviceEntity getDeviceOnlineDBStatus(Integer devId) {
+    public MqttDeviceModel getDeviceOnlineDBStatus(Integer devId) {
         String finalApi = databaseServiceUrl + "/mqtt-devices/device/" + String.valueOf(devId);
         try {
-            ResponseEntity<MqttDeviceEntity> response = restTemplate.exchange(finalApi, HttpMethod.GET, null, MqttDeviceEntity.class);
+            ResponseEntity<MqttDeviceModel> response = restTemplate.exchange(finalApi, HttpMethod.GET, null, MqttDeviceModel.class);
             if (response.getStatusCode().is2xxSuccessful()) {
                 return response.getBody();
             } else {
