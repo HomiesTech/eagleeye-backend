@@ -77,13 +77,17 @@ public class DevicesManager {
             long minuteDifference = Duration.between(syncTime, now).toMinutes();
             if (minuteDifference >= 0 && minuteDifference < MIN_ACTIVE_MINUTE) {
                 device.setActiveState(1); // ACTIVE
+                this.deviceRepository.updateActiveState(device.getDeviceId(), 1);
             } else if (minuteDifference >= MIN_ACTIVE_MINUTE && minuteDifference < MAX_ACTIVE_MINUTE) {
                 device.setActiveState(2); // WARN
+                this.deviceRepository.updateActiveState(device.getDeviceId(),2);
             } else {
                 device.setActiveState(0); // OFFLINE
+                this.deviceRepository.updateActiveState(device.getDeviceId(),0);
             }
         } else {
             device.setActiveState(0); // Default to OFFLINE
+            this.deviceRepository.updateActiveState(device.getDeviceId(),0);
         }
     }
 

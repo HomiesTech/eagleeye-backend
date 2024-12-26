@@ -32,10 +32,10 @@ public class AlarmsDBEntity {
     private LocalDateTime startTime;
 
     @Column
-    private LocalDateTime duration;
+    private Long duration;
 
     @Column
-    private String key;
+    private String alarmKey;
 
     @Column 
     private String status;

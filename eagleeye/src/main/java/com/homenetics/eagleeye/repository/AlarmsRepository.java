@@ -15,8 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 public interface AlarmsRepository extends JpaRepository<AlarmsDBEntity, Integer> {
     @Modifying
     @Transactional
-    @Query("INSERT INTO alarms (entity_type, entity_id, severity, start_time, duration, key, status, detail, last_updated_time, resolution_time, state) " +
-            "VALUES (:entityType, :entityId, :severity, :startTime, :duration, :key, :status, :detail, :lastUpdatedTime, :resolutionTime, :state)")
+    @Query(value = "INSERT INTO alarms (entity_type, entity_id, severity, start_time, duration, alarm_key, status, detail, last_updated_time, resolution_time, state) " +
+            "VALUES (:entityType, :entityId, :severity, :startTime, :duration, :key, :status, :detail, :lastUpdatedTime, :resolutionTime, :state)", nativeQuery = true)
     void addAlarm(@Param("entityType") String entityType,
                   @Param("entityId") Integer entityId,
                   @Param("severity") Integer severity,
@@ -28,14 +28,13 @@ public interface AlarmsRepository extends JpaRepository<AlarmsDBEntity, Integer>
                   @Param("lastUpdatedTime") LocalDateTime lastUpdatedTime,
                   @Param("state") Boolean state);
 
-    @Modifying
-    @Transactional
-    @Query("SELECT alarm_id FROM alarms a WHERE a.entity_type = :entityType AND a.entity_id = :entityId AND a.key = :key AND a.state = 1")
-    Integer getActiveAlarm(@Param("entityType") String entityType,@Param("entityId") Integer entityId,@Param("key") String key);
+    @Query(value = "SELECT * FROM alarms a WHERE a.entity_type = :entityType AND a.entity_id = :entityId AND a.alarm_key = :key AND a.state = 1", nativeQuery = true)
+    AlarmsDBEntity getActiveAlarm(@Param("entityType") String entityType,@Param("entityId") Integer entityId,@Param("key") String key);
 
+    // Move alarm to history
     @Modifying
     @Transactional
-    @Query("UPDATE alarms SET resolution_time = :resolutionTime, state = 0 WHERE entity_type = :entityType AND entity_id = :entityId AND key = :key")
+    @Query(value = "UPDATE alarms SET resolution_time = :resolutionTime, state = 0 WHERE entity_type = :entityType AND entity_id = :entityId AND alarm_key = :key", nativeQuery = true)
     void updateAlarmState(@Param("entityType") String entityType,@Param("entityId") Integer entityId,@Param("key") String key, @Param("resolutionTime") LocalDateTime resolutionTime);
 
 }
