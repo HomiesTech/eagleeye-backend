@@ -19,7 +19,8 @@ import java.util.List;
 
 @Service
 public class DatabaseService {
-   private static final String databaseServiceUrl = "http://172.19.0.2/database/api";
+     private static final String databaseServiceUrl = "http://192.168.29.20/database/api";
+    // private static final String databaseServiceUrl = "http://172.19.0.2/database/api";
     // private static final String databaseServiceUrl = "http://192.168.29.49/database/api";
     @Autowired
     private RestTemplate restTemplate;

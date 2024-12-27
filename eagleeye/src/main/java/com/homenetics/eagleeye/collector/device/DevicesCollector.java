@@ -22,15 +22,14 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class DevicesCollector {
     private final List<FileDeviceEntity> fileDevices = new ArrayList<>();
-    // private final List<BootTimeDeviceEntity> bootTimeDevices = new ArrayList<>();
     private static final Logger logger = LoggerFactory.getLogger(DevicesCollector.class);
 
     @Autowired
     private DeviceRepository deviceRepository;
 
 
-   private static final String DeviceDataPath = "D:\\DATA\\data";
-    // private static final String DeviceDataPath = "/var/homenetics/devices/data";
+//    private static final String DeviceDataPath = "D:\\DATA\\data";
+    private static final String DeviceDataPath = "/var/homenetics/devices/data";
     public synchronized List<FileDeviceEntity> getAllFileDevices() {
         return new ArrayList<>(fileDevices);
     }
@@ -148,7 +147,7 @@ public class DevicesCollector {
                                         deviceEntity.getUsers(),
                                         now
                                 );
-                                logger.info("Processed device file: {}", deviceFile.getName());
+                                logger.info("Processed device file: {}", deviceFile.getName(), deviceEntity);
                             }
                         } else {
 

@@ -93,7 +93,7 @@ public class AlarmManager {
         }
 
         if (exisitingAlarm != null) {
-            logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
+            // logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
             if (!exisitingAlarm.getSeverity().equals(alarmEntity.getSeverity()) || !exisitingAlarm.getStatus().equals(alarmEntity.getStatus())) {
                 // alarm severity/status changes, move to history
                 this.alarmsRepository.updateAlarmState(alarmEntity.getEntityType(),
@@ -109,7 +109,7 @@ public class AlarmManager {
                 alarmEntity.setDuration(this.getDuration(alarmEntity.getStartTime()));
                 AlarmsDBEntity oldAlarmUpdate = this.alarmEntityToAlarmDBEntity(alarmEntity, true);
                 this.alarmsRepository.save(oldAlarmUpdate);
-                logger.info("Old alarm updated: {}", oldAlarmUpdate);
+                // logger.info("Old alarm updated: {}", oldAlarmUpdate);
                 return;
             }
         }
@@ -147,7 +147,7 @@ public class AlarmManager {
         }
 
         if (exisitingAlarm != null) {
-            logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
+            // logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
             if (!exisitingAlarm.getSeverity().equals(alarmEntity.getSeverity())) {
                 // Move existing alarm to history, as existing alarm changes
                 this.alarmsRepository.updateAlarmState(alarmEntity.getEntityType(),
@@ -164,7 +164,7 @@ public class AlarmManager {
                 alarmEntity.setDuration(this.getDuration(alarmEntity.getStartTime()));
                 AlarmsDBEntity oldAlarmUpdate = this.alarmEntityToAlarmDBEntity(alarmEntity, true);
                 this.alarmsRepository.save(oldAlarmUpdate);
-                logger.info("Old alarm updated: {}", oldAlarmUpdate);
+                // logger.info("Old alarm updated: {}", oldAlarmUpdate);
                 return;
             }
         }
@@ -210,7 +210,7 @@ public class AlarmManager {
         }
 
         if (exisitingAlarm != null) {
-            logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
+            // logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
             if (!exisitingAlarm.getSeverity().equals(alarmEntity.getSeverity()) || !exisitingAlarm.getStatus().equals(alarmEntity.getStatus())) {
                 // alarm severity changed, push old alarm to history
                 this.alarmsRepository.updateAlarmState(alarmEntity.getEntityType(),
@@ -227,7 +227,7 @@ public class AlarmManager {
                 alarmEntity.setDuration(this.getDuration(alarmEntity.getStartTime()));
                 AlarmsDBEntity oldAlarmUpdate = this.alarmEntityToAlarmDBEntity(alarmEntity, true);
                 this.alarmsRepository.save(oldAlarmUpdate);
-                logger.info("Old alarm updated: {}", oldAlarmUpdate);
+                // logger.info("Old alarm updated: {}", oldAlarmUpdate);
                 return;
             }
         }
@@ -273,7 +273,7 @@ public class AlarmManager {
         }
 
         if (exisitingAlarm != null) {
-            logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
+            // logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
             if (!exisitingAlarm.getSeverity().equals(alarmEntity.getSeverity()) || !exisitingAlarm.getStatus().equals(alarmEntity.getStatus())) {
                 // alarm severity changed, push old alarm to history
                 this.alarmsRepository.updateAlarmState(alarmEntity.getEntityType(),
@@ -290,7 +290,7 @@ public class AlarmManager {
                 alarmEntity.setDuration(this.getDuration(alarmEntity.getStartTime()));
                 AlarmsDBEntity oldAlarmUpdate = this.alarmEntityToAlarmDBEntity(alarmEntity, true);
                 this.alarmsRepository.save(oldAlarmUpdate);
-                logger.info("Old alarm updated: {}", oldAlarmUpdate);
+                // logger.info("Old alarm updated: {}", oldAlarmUpdate);
                 return;
             }
         }
@@ -330,7 +330,7 @@ public class AlarmManager {
         }
 
         if (exisitingAlarm != null) {
-            logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
+            // logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
             if (!exisitingAlarm.getSeverity().equals(alarmEntity.getSeverity()) || !exisitingAlarm.getStatus().equals(alarmEntity.getStatus())) {
                 // alarm severity changed, push old alarm to history
                 this.alarmsRepository.updateAlarmState(alarmEntity.getEntityType(),
@@ -347,7 +347,7 @@ public class AlarmManager {
                 alarmEntity.setDuration(this.getDuration(alarmEntity.getStartTime()));
                 AlarmsDBEntity oldAlarmUpdate = this.alarmEntityToAlarmDBEntity(alarmEntity, true);
                 this.alarmsRepository.save(oldAlarmUpdate);
-                logger.info("Old alarm updated: {}", oldAlarmUpdate);
+                // logger.info("Old alarm updated: {}", oldAlarmUpdate);
                 return;
             }
         }
@@ -387,7 +387,7 @@ public class AlarmManager {
         }
 
         if (exisitingAlarm != null) {
-            logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
+            // logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
             if (!exisitingAlarm.getSeverity().equals(alarmEntity.getSeverity()) || !exisitingAlarm.getStatus().equals(alarmEntity.getStatus())) {
                 // alarm severity changed, push old alarm to history
                 this.alarmsRepository.updateAlarmState(alarmEntity.getEntityType(),
@@ -404,7 +404,7 @@ public class AlarmManager {
                 alarmEntity.setDuration(this.getDuration(alarmEntity.getStartTime()));
                 AlarmsDBEntity oldAlarmUpdate = this.alarmEntityToAlarmDBEntity(alarmEntity, true);
                 this.alarmsRepository.save(oldAlarmUpdate);
-                logger.info("Old alarm updated: {}", oldAlarmUpdate);
+                // logger.info("Old alarm updated: {}", oldAlarmUpdate);
                 return;
             }
         }
@@ -459,7 +459,7 @@ public class AlarmManager {
         }
 
         if (exisitingAlarm != null) {
-            logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
+            // logger.info("[Existing Alarm] {} [Current Alarm] {}", exisitingAlarm, alarmEntity);
             if (!exisitingAlarm.getSeverity().equals(alarmEntity.getSeverity()) || !exisitingAlarm.getStatus().equals(alarmEntity.getStatus())) {
                 // alarm severity changed, push old alarm to history
                 this.alarmsRepository.updateAlarmState(alarmEntity.getEntityType(),
@@ -476,7 +476,7 @@ public class AlarmManager {
                 alarmEntity.setDuration(this.getDuration(alarmEntity.getStartTime()));
                 AlarmsDBEntity oldAlarmUpdate = this.alarmEntityToAlarmDBEntity(alarmEntity, true);
                 this.alarmsRepository.save(oldAlarmUpdate);
-                logger.info("Old alarm updated: {}", oldAlarmUpdate);
+                // logger.info("Old alarm updated: {}", oldAlarmUpdate);
                 return;
             }
         }
