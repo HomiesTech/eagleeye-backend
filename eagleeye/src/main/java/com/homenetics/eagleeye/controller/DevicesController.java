@@ -67,7 +67,7 @@ public class DevicesController {
         @RequestParam(value = "size", defaultValue = "10") Integer size,
         @RequestParam(value = "sortFields", defaultValue = "") List<String> sortFields,
         @RequestParam(value = "sortOrders", defaultValue = "") List<String> sortOrders,
-        @RequestParam(value = "activeState", defaultValue = "1") Boolean state, // Filter by active state
+        @RequestParam(value = "activeState", defaultValue = "1") Boolean activeState, // Filter by active state
         @RequestParam Map<String, String> filters // Catch all additional filter parameters
     ) {
         try {
@@ -90,9 +90,9 @@ public class DevicesController {
             // Build dynamic speicifications
             Specification<DeviceDBEntity> spec = Specification.where(null);
             // Add state filter if provided
-            if (state != null) {
+            if (activeState != null) {
                 spec = spec.and((root, query, criteiraBuilder) -> 
-                    criteiraBuilder.equal(root.get("state"), state)
+                    criteiraBuilder.equal(root.get("activeState"), activeState)
                 );
             }
 
