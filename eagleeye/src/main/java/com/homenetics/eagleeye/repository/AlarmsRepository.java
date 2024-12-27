@@ -41,4 +41,7 @@ public interface AlarmsRepository extends JpaRepository<AlarmsDBEntity, Integer>
 
     Page<AlarmsDBEntity> findByStateAndSeverityIn(Boolean state, List<Integer> severity, Pageable pageable);
 
+    @Query(value = "SELECT * FROM alarms a WHERE a.entity_type = :entityType AND a.entity_id = :entityId AND a.state = 1", nativeQuery = true)
+    List<AlarmsDBEntity> getActiveAlarms(@Param("entityType") String entityType,@Param("entityId") Integer entityId);
+
 }

@@ -40,8 +40,8 @@ public class AlarmsController {
         @RequestParam(value = "sortFields", defaultValue = "") List<String> sortFields,
         @RequestParam(value = "sortOrders", defaultValue = "") List<String> sortOrders,
         @RequestParam(value = "state", defaultValue = "1") Boolean state, // Filter by active state
-        @RequestParam(value = "severity", required = false) List<Integer> severity, // Filter by multiple severities
-        @RequestParam Map<String, String> filters // Catch all additional filter parameters
+        @RequestParam(value = "severity", required = false) List<Integer> severity // Filter by multiple severities
+        // @RequestParam Map<String, String> filters // Catch all additional filter parameters
     ) {
         try {
             // Validate sort fields and orders
@@ -60,30 +60,32 @@ public class AlarmsController {
             Sort sort = orders.isEmpty() ? Sort.unsorted() : Sort.by(orders);
             PageRequest pageRequest = PageRequest.of(page, size, sort);
 
-            // Build dynamic speicifications
+            // Build dynamic specifications
             Specification<AlarmsDBEntity> spec = Specification.where(null);
+            
             // Add state filter if provided
             if (state != null) {
-                spec = spec.and((root, query, criteiraBuilder) -> 
-                    criteiraBuilder.equal(root.get("state"), state)
+                spec = spec.and((root, query, criteriaBuilder) -> 
+                    criteriaBuilder.equal(root.get("state"), state)
                 );
             }
 
             // Add severity filter if provided
             if (severity != null && !severity.isEmpty()) {
-                spec = spec.and((root, query, criteiraBuilder) -> 
-                    criteiraBuilder.in(root.get("severity")).value(severity)
+                spec = spec.and((root, query, criteriaBuilder) -> 
+                    criteriaBuilder.in(root.get("severity")).value(severity)
                 );
             }
 
-            // Add dynamic filters
-            for (Map.Entry<String, String> entry : filters.entrySet()) {
-                String key = entry.getKey();
-                String value = entry.getValue();
-                spec = spec.and((root, query, criteiraBuilder) -> 
-                    criteiraBuilder.equal(root.get(key), value)
-                );
-            }
+            // // Add dynamic filters
+            // for (Map.Entry<String, String> entry : filters.entrySet()) {
+            //     String key = entry.getKey();
+            //     String value = entry.getValue();
+            //     spec = spec.and((root, query, criteriaBuilder) -> 
+            //         criteriaBuilder.equal(root.get(key), value)
+            //     );
+            // }
+
             // Fetch alarms with dynamic filtering
             Page<AlarmsDBEntity> alarmsPage = alarmsRepository.findAll(spec, pageRequest);
             return new ResponseEntity<>(alarmsPage, HttpStatus.OK);
@@ -95,12 +97,12 @@ public class AlarmsController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AlarmsDBEntity> getDeviceById(@PathVariable("id") String id) {
+    public ResponseEntity<?> getDeviceById(@PathVariable("id") String id) {
         try {
-            AlarmsDBEntity device = this.alarmsRepository.findById(Integer.valueOf(id)).orElse(null);
+            List<AlarmsDBEntity> device = alarmsRepository.getActiveAlarms("device",Integer.valueOf(id));
             if (device == null) {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            }else {
+            } else {
                 return new ResponseEntity<>(device, HttpStatus.OK);
             }
         } catch (Exception e) {
@@ -108,5 +110,4 @@ public class AlarmsController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-    
 }
