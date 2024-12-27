@@ -9,16 +9,21 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.homenetics.eagleeye.entity.APIEntity.DeviceCredEntity;
 import com.homenetics.eagleeye.entity.KafkaEntity.KafkaMessageEntity;
 import com.homenetics.eagleeye.models.DeviceModel;
 import com.homenetics.eagleeye.models.MqttDeviceModel;
 import com.homenetics.eagleeye.repository.DeviceRepository;
+import com.homenetics.eagleeye.service.DatabaseService;
 import com.homenetics.eagleeye.util.ObjectMapperProvider;
 
 @Service
 public class KafkaConsumer {
 
     Logger logger = LoggerFactory.getLogger(KafkaConsumer.class);
+
+    @Autowired
+    private DatabaseService databaseService;
 
     @Autowired
     private DeviceRepository deviceRepository;
@@ -38,6 +43,8 @@ public class KafkaConsumer {
 
             if ("create".equals(action) || "update".equals(action)) {
                 deviceRepository.upsertDBDevice(device.getDevId(),device.getMacAddress(),device.getSsid(),device.getUserId(),device.getCreatedAt(),device.getUpdatedAt());
+                DeviceCredEntity deviceCred = this.databaseService.getDeviceCredById(device.getDevId());
+                deviceRepository.updateSsid(device.getDevId(), deviceCred.getSsid());
             } else if ("delete".equals(action)) {
                 deviceRepository.deleteDeviceById(device.getDevId());
             } else {

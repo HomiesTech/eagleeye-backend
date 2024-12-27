@@ -121,6 +121,15 @@ public interface DeviceRepository extends JpaRepository<DeviceDBEntity, Integer>
     @Query(value = "UPDATE devices SET active_state = :activeState WHERE device_id = :deviceId", nativeQuery = true)
     void updateActiveState(@Param("deviceId") Integer deviceId, @Param("activeState") Integer activeState);
     
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE devices SET is_online_in_db = :isOnlineInDb WHERE device_id = :deviceId", nativeQuery = true)
+    void updateOnlineState(@Param("deviceId") Integer deviceId, @Param("isOnlineInDb") Boolean isOnlineInDb);
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE devices SET ssid = :ssid WHERE device_id = :deviceId", nativeQuery = true)
+    void updateSsid(@Param("deviceId") Integer deviceId, @Param("ssid") String ssid);
 
     @Query("SELECT new com.homenetics.eagleeye.repository.DTO.ActiveStateDTO(d.deviceId, d.syncTime) FROM DeviceDBEntity d")
     Page<ActiveStateDTO> findActiveDevices(Pageable pageable);

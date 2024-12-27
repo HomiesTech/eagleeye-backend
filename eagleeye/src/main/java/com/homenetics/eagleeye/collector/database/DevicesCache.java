@@ -7,8 +7,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.homenetics.eagleeye.entity.APIEntity.DeviceCredEntity;
 import com.homenetics.eagleeye.models.DeviceModel;
 import com.homenetics.eagleeye.models.DeviceModelWrapper;
+import com.homenetics.eagleeye.models.MqttDeviceModel;
 import com.homenetics.eagleeye.repository.DeviceRepository;
 import com.homenetics.eagleeye.service.DatabaseService;
 
@@ -51,6 +53,21 @@ public class DevicesCache {
                             device.getCreatedAt(),
                             device.getUpdatedAt()
                         );
+                        try {
+                            MqttDeviceModel dbOnlineStatus = this.databaseService.getDeviceOnlineDBStatus(device.getDevId());
+                            logger.info("Device ID: {}, Online Status in DB: {}", device.getDevId(), dbOnlineStatus.getStatus());
+                            deviceRepository.updateOnlineState(device.getDevId(), dbOnlineStatus.getStatus());
+                        } catch (Exception e) {
+                            logger.error("Error occurred while fetching device online status: {}", e.getMessage(), e);
+                        }
+
+                        try {
+                            DeviceCredEntity deviceCred = this.databaseService.getDeviceCredById(device.getDevId());
+                            logger.info("Device ID: {}, SSID in DB: {}", device.getDevId(), deviceCred.getSsid());
+                            deviceRepository.updateSsid(device.getDevId(), deviceCred.getSsid());
+                        } catch (Exception e) {
+                            logger.error("Error occurred while fetching device SSID: {}", e.getMessage(), e);
+                        }
                     });
                 });
 
