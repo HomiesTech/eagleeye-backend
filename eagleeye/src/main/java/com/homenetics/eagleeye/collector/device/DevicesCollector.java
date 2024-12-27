@@ -29,7 +29,8 @@ public class DevicesCollector {
 
 
 //    private static final String DeviceDataPath = "D:\\DATA\\data";
-    private static final String DeviceDataPath = "/var/homenetics/devices/data";
+    // private static final String DeviceDataPath = "/var/homenetics/devices/data";
+    private static final String DeviceDataPath = "/app/devices/data";
     public synchronized List<FileDeviceEntity> getAllFileDevices() {
         return new ArrayList<>(fileDevices);
     }
@@ -91,7 +92,7 @@ public class DevicesCollector {
             String todayDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             String todayDateP2 = now.format(DateTimeFormatter.ofPattern("ddMMyyyy"));
             int currentHour = now.getHour();
-            int targetMinute = now.getMinute() - 1;
+            int targetMinute = now.getMinute() - 2;
 
             if (targetMinute < 0) {
                 // Handle the case where minute goes negative (e.g., 00 -> 59 and adjust the hour)
@@ -147,11 +148,11 @@ public class DevicesCollector {
                                         deviceEntity.getUsers(),
                                         now
                                 );
-                                logger.info("Processed device file: {}", deviceFile.getName(), deviceEntity);
+                                logger.info("Processed device file: {}", deviceFile.getAbsolutePath(), deviceEntity);
                             }
                         } else {
 
-                            logger.warn("No matching file found for the generated filename: {}", generatedFilename);
+                            logger.warn("No matching file found for the generated filename: {}", deviceFile.getAbsolutePath());
                         }
                     });
 
@@ -213,57 +214,11 @@ public class DevicesCollector {
             deviceEntity.setOtaTry(deviceInfo.get("ota_try"));
             deviceEntity.setCredChangeOk(deviceInfo.get("change_cred_ok"));
             deviceEntity.setCredChangeOk(deviceInfo.get("change_cred_try"));
-            // deviceEntity.setMessage_publish_status_fail_count(Integer.valueOf(deviceInfo.get("message_publish_status_fail_count")));
 
-            // CustomerModel tryOkCust;
-            // if (deviceInfo.get("change_cred_try") != null) {
-            //     DeviceUserEntity changeCredTryUser = new DeviceUserEntity();
-            //     tryOkCust = customers.getCustomerByCode(deviceInfo.get("change_cred_try"));
-            //     if (tryOkCust != null) {
-            //         changeCredTryUser.setCustomerId(tryOkCust.getId());
-            //         changeCredTryUser.setName(tryOkCust.getName());
-            //         changeCredTryUser.setUserCode(deviceInfo.get("change_cred_try"));
-            //     }
-            //     deviceEntity.setCredChangeTry(changeCredTryUser);
-            // }
-
-            // if (deviceInfo.get("change_cred_ok") != null) {
-            //     DeviceUserEntity changeCredTryOk = new DeviceUserEntity();
-            //     tryOkCust = customers.getCustomerByCode(deviceInfo.get("change_cred_ok"));
-            //     if (tryOkCust != null) {
-            //         changeCredTryOk.setCustomerId(tryOkCust.getId());
-            //         changeCredTryOk.setName(tryOkCust.getName());
-            //         changeCredTryOk.setUserCode(deviceInfo.get("change_cred_ok"));
-            //     }
-            //     deviceEntity.setCredChangeOk(changeCredTryOk);
-            // }
-
-            // if (deviceInfo.get("ota_try") != null) {
-            //     DeviceUserEntity otaTryUser = new DeviceUserEntity();
-            //     tryOkCust = customers.getCustomerByCode(deviceInfo.get("ota_try"));
-            //     if (tryOkCust != null) {
-            //         otaTryUser.setCustomerId(tryOkCust.getId());
-            //         otaTryUser.setName(tryOkCust.getName());
-            //         otaTryUser.setUserCode(deviceInfo.get("ota_try"));
-            //     }
-            //     deviceEntity.setOtaTry(otaTryUser);
-            // }
-
-            // if (deviceInfo.get("ota_ok") != null) {
-            //     DeviceUserEntity otaTryOk = new DeviceUserEntity();
-            //     tryOkCust = customers.getCustomerByCode(deviceInfo.get("ota_ok"));
-            //     if (tryOkCust != null) {
-            //         otaTryOk.setCustomerId(tryOkCust.getId());
-            //         otaTryOk.setName(tryOkCust.getName());
-            //         otaTryOk.setUserCode(deviceInfo.get("ota_ok"));
-            //     }
-            //     deviceEntity.setOtaOk(otaTryOk);
-            // }
 
             deviceEntity.setDownloadMqttUrlResponseCode(deviceInfo.get("download_mqtt_url_res_code") != null ? Integer.valueOf(deviceInfo.get("download_mqtt_url_res_code")) : -99);
             deviceEntity.setMillis(Long.valueOf(deviceInfo.get("millis")));
             deviceEntity.setUsername(deviceInfo.get("username"));
-            // Parse sync_time to LocalDateTime
             String syncTimeString = deviceInfo.get("sync_time");
             logger.info("sync_time: {}", syncTimeString);
             if (syncTimeString != null) {
@@ -274,30 +229,6 @@ public class DevicesCollector {
 
             deviceEntity.setUsers(deviceInfo.get("users"));
             logger.warn("[FileDeviceEntity] {}", deviceEntity);
-
-            // String[] userRecords = deviceInfo.get("users").split("\\|");
-            // for (String userRecord : userRecords) {
-            //     if (!userRecord.trim().isEmpty()) {
-            //         // Split each record by "," to extract user details
-            //         String[] userDetails = userRecord.split(",");
-            //         if (userDetails.length == 3) { // Ensure all details are present
-            //             String userCode = userDetails[0];
-            //             String userIpAddress = userDetails[1];
-            //             String userFailureCount = userDetails[2];
-            //             DeviceUserEntity deviceUserEntity = new DeviceUserEntity();
-            //             deviceUserEntity.setUserCode(userCode);
-            //             deviceUserEntity.setUserIpAddress(userIpAddress);
-            //             deviceUserEntity.setUserFailureCount(userFailureCount);
-
-            //             CustomerModel customer = customers.getCustomerByCode(userCode);
-            //             if (customer != null) {
-            //                 deviceUserEntity.setCustomerId(customer.getId());
-            //                 deviceUserEntity.setName(customer.getName());
-            //             }
-            //             // deviceEntity.setDeviceUser(deviceUserEntity);
-            //         }
-            //     }
-            // }
             return deviceEntity;
         } catch (Exception e) {
             logger.error("Error creating FileDeviceEntity for file: {}", deviceFile.getName(), e);
